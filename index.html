@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Szolgáltatás-katalógus</title>
+<title>TEKNO – Termékfejlesztés Koordináció Nyomon követési és Operatív riportjai</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -164,7 +164,8 @@ button,input,select,textarea{font-family:var(--font-sans)}button:focus-visible,i
 <div id="app" style="display:none;">
 <header class="board">
   <div class="board-inner">
-    <h1>Szolgáltatás-katalógus</h1>
+    <h1>TEKNO</h1>
+    <div class="tekno-full" style="font-size:13px;letter-spacing:.3px;opacity:.85;margin:0 0 10px">Termékfejlesztés Koordináció Nyomon követési és Operatív riportjai</div>
     <p class="tagline">Utasélményt érintő szolgáltatásfejlesztési kezdeményezések nyomon követése: kerékpárszállítás, családbarát utazás, akadálymentesítés, utaskomfort és vendéglátás.</p>
     <div class="sync-status"><span class="sync-dot" id="syncDot"></span><span id="syncText">Kapcsolódás…</span></div>
     <div class="tally" id="tally"></div>
@@ -293,7 +294,7 @@ function initFirebase(){
   }, err=>{
     document.getElementById('syncDot').classList.add('off');
     document.getElementById('syncText').textContent='Nincs kapcsolat: '+err.message;
-    sendKpisToAbigel('Nem érhető el a szolgáltatás-katalógus: '+err.message);
+    sendKpisToAbigel('Nem érhető el a TEKNO: '+err.message);
   });
 }
 
