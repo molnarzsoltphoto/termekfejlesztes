@@ -233,6 +233,7 @@ button,input,select,textarea{font-family:var(--font-sans)}button:focus-visible,i
 
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 <script>
 // ---- 1) TÖLTSD KI A SAJÁT FIREBASE-PROJETED ADATAIVAL ----
 const firebaseConfig = {
@@ -283,7 +284,7 @@ function esc(s){ return (s||'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','
 function huDate(iso){ if(!iso) return ''; const p=iso.split('-'); return p[0]+'. '+HU_MONTHS[parseInt(p[1],10)-1]+' '+parseInt(p[2],10)+'.'; }
 function isOverdue(e){ return e.deadline && e.deadline < new Date().toISOString().slice(0,10) && e.status!=='live' && e.status!=='phaseout'; }
 
-function initFirebase(){
+async function initFirebase(){
   if(typeof firebase==='undefined'){document.getElementById('setupScreen').style.display='block';document.querySelector('#setupScreen .box').textContent='Nem sikerült betölteni a Firebase-t. Ellenőrizd a hálózatot.';return;}
   if(!firebaseConfig.apiKey || firebaseConfig.apiKey.indexOf('IDE_MASOLD')===0){
     document.getElementById('setupScreen').style.display='block';
@@ -292,6 +293,16 @@ function initFirebase(){
   document.getElementById('app').style.display='block';
   firebase.initializeApp(firebaseConfig);
   db=firebase.firestore();
+  // Névtelen bejelentkezés: a Firestore-szabály így csak bejelentkezett (az oldalt megnyitó) klienst enged írni, a REST-es kíváncsiskodót nem.
+  // Firebase konzol → Authentication → Sign-in method → Anonymous: Enable. Ha nincs bekapcsolva, a kód auth nélkül fut tovább (a régi viselkedés).
+  async function teknoAuth(){
+    if(!firebase.auth) return;
+    try{
+      await new Promise(res=>{const u=firebase.auth().onAuthStateChanged(x=>{u();res(x);});});
+      if(!firebase.auth().currentUser) await firebase.auth().signInAnonymously();
+    }catch(e){ console.warn('Névtelen bejelentkezés nem sikerült (Authentication → Anonymous engedélyezve?):', e.message); }
+  }
+  await teknoAuth();
   col=db.collection('services');
   initStats();
   col.onSnapshot(snap=>{
