@@ -1367,6 +1367,13 @@
     .checkbox-item.disabled:hover { background: transparent; }
     #btn-run-export:disabled { opacity: 0.6; cursor: wait; }
 
+    /* Modálok: fejléc és lábléc mindig látszik, csak a tartalom görget */
+    .modal-card { overflow: hidden; max-height: calc(100vh - 32px); }
+    .modal-head, .modal-foot { flex-shrink: 0; }
+    .modal-body { overflow-y: auto; flex: 1 1 auto; min-height: 0; }
+    #export-modal .modal-body { gap: 12px; padding-top: 14px; padding-bottom: 14px; }
+    #export-modal .checkbox-item { padding: 4px 6px; }
+
     /* Reszponzív töréspontok */
     @media (max-width: 1180px) {
       .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -4627,6 +4634,17 @@
       document.getElementById('export-items').innerHTML = html;
     }
 
+    // Ha a riport iframe-ben fut (pl. TEKNO), a szülő oldal görgesse teljesen láthatóvá, hogy a modál ne lógjon ki
+    function revealInParent() {
+      try {
+        if (window.parent !== window && window.frameElement) {
+          var r = window.frameElement.getBoundingClientRect();
+          var ph = window.parent.innerHeight;
+          if (r.top < 0 || r.bottom > ph) window.frameElement.scrollIntoView({ block: 'start' });
+        }
+      } catch (e) { /* más eredetű szülő: nincs teendő */ }
+    }
+
     function closeExportModal() {
       document.getElementById('export-modal').classList.add('hidden');
     }
@@ -5920,9 +5938,11 @@
       // Export (PowerPoint / PNG)
       var exModal = document.getElementById('export-modal');
       document.getElementById('btn-open-export').addEventListener('click', function () {
+        revealInParent();
         renderExportModal();
         exModal.classList.remove('hidden');
       });
+      document.getElementById('btn-open-upload').addEventListener('click', revealInParent);
       document.getElementById('btn-close-export').addEventListener('click', closeExportModal);
       exModal.addEventListener('click', function (e) { if (e.target === exModal) closeExportModal(); });
       document.getElementById('export-format').addEventListener('click', function (e) {
