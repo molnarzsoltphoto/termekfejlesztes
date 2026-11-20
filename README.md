@@ -14,6 +14,10 @@
 
 Opcionálisan egy 3. fájl is betölthető: **viszonylati km-tábla** (`vonatszám;km` vagy `induló;cél;km`) – ezzel km-súlyozott kihasználtság és utaskm jelenik meg. A 3. fül beállításai (cél-kihasználtság, alap egységméret, helyjegyár) a mentett riportba is bekerülnek.
 
+További opcionális fájlok:
+- **Bisztró bevétel és tranzakció** (`.xlsx`, az eredeti munkafüzet, pl. `bisztro_bev_tra_20261120.xlsx`): vonatszám és nap szerint a prémium adatok mellé kerül a 2026-os tranzakciószám (KPI, járattáblázat, grafikon-tooltip). Kihagyott cellák: 300 tranzakció/vonat fölött vagy 200 Ft alatti átlagkosárnál (elcsúszott cella). A több vonatra rögzített fordulótételek (pl. `808.801`) nem bonthatók vonatra.
+- **Indulási idők** (`vonatszám;indulás`, CSV vagy .xlsx). Nem kell, ha a járati CSV-ben van „Indulási idő” oszlop. A vonatok a vonatneveken belül ez szerint rendeződnek; enélkül vonatszám szerint.
+
 A szerkesztőben nincs adat; a CSV-k csak a böngészőben dolgozódnak fel. Az **⬇ Export** gombbal (élő riportban is) PowerPoint (.pptx) vagy PNG készíthető az aktuális szűrésről.
 
 ## Előrejelzés és kocsiszám-javaslat (3. fül)
