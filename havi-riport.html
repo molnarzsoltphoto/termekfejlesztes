@@ -1374,6 +1374,26 @@
     #export-modal .modal-body { gap: 12px; padding-top: 14px; padding-bottom: 14px; }
     #export-modal .checkbox-item { padding: 4px 6px; }
 
+    /* Előrejelzés fül */
+    .fc-chip { display: inline-block; font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 999px;
+      color: var(--chip); background: color-mix(in srgb, var(--chip) 12%, #ffffff); border: 1px solid color-mix(in srgb, var(--chip) 30%, #ffffff); margin-right: 4px; }
+    .fc-badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 999px; background: #dcfce7; color: #166534; }
+    .fc-badge.est { background: #fef3c7; color: #92400e; }
+    .fc-ev-row { cursor: pointer; }
+    .fc-ev-row.selected td { background: #eff6ff; }
+    .fc-ev-row.selected td:first-child { box-shadow: inset 3px 0 0 var(--sky); }
+    .fc-small { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+    .fc-rec { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 2px 8px; border-radius: 6px; margin: 1px 2px 1px 0; white-space: nowrap; }
+    .fc-rec.plus { background: #fee2e2; color: #991b1b; }
+    .fc-rec.minus { background: #dcfce7; color: #166534; }
+    .fc-rec.watch { background: #fef3c7; color: #92400e; }
+    .fc-method { font-size: 12.5px; color: var(--text-secondary); line-height: 1.55; }
+    .fc-method h3 { font-size: 14px; color: var(--navy); margin: 0 0 6px; }
+    .fc-method ul { margin: 4px 0 8px 18px; padding: 0; }
+    .unit-txt { font-size: 12.5px; color: var(--text-muted); }
+    #tab3 table.data-table tbody td { white-space: normal; vertical-align: top; }
+    #tab3 table.data-table { min-width: 980px; }
+
     /* Reszponzív töréspontok */
     @media (max-width: 1180px) {
       .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1446,6 +1466,7 @@
       <nav class="tab-list" role="tablist">
         <button class="tab-btn active" data-tab="tab1" role="tab" aria-selected="true" type="button">1. Járat- és kocsiosztály-elemző</button>
         <button class="tab-btn" data-tab="tab2" role="tab" aria-selected="false" type="button">2. Turisztikai napijegyek</button>
+        <button class="tab-btn" data-tab="tab3" role="tab" aria-selected="false" type="button">3. Előrejelzés és kocsiszám-javaslat</button>
       </nav>
       <div id="data-meta-summary" class="data-meta-summary"></div>
     </div>
@@ -1513,6 +1534,14 @@
               <button id="t1-clear-months" class="mini-clear-btn hidden" type="button">Mind</button>
             </div>
             <div id="t1-months" class="month-grid"></div>
+          </div>
+
+          <div class="filter-group">
+            <label class="switch-toggle" title="A „vonatpótló” vonatnemű járatok (pótlóbuszos napok) torzítják az átlagot, a YoY-t és a radart">
+              <input id="t1-excl-repl" type="checkbox" checked>
+              <span class="switch-track"></span>
+              <span>Vonatpótlásos járatok kizárása</span>
+            </label>
           </div>
 
           <button id="t1-reset-all" class="btn btn-danger-soft" type="button">✕ Szűrők törlése</button>
@@ -1599,6 +1628,11 @@
                   <button class="seg-btn active" data-val="bars" type="button">Oszlopdiagram</button>
                   <button class="seg-btn" data-val="heat" type="button">Hőtérkép</button>
                 </div>
+                <label class="switch-toggle" title="Ünnepek, hosszú hétvégék és iskolai szünetek napjai nélkül (a tiszta heti mintához)">
+                  <input id="t1-wd-excl" type="checkbox">
+                  <span class="switch-track"></span>
+                  <span>Ünnepek, szünetek nélkül</span>
+                </label>
                 <span id="t1-wd-heat-wrap" class="control-group hidden">
                   <span class="control-label">Osztály:</span>
                   <select id="t1-wd-heat-class" class="select-control select-inline" aria-label="Hőtérkép kocsiosztály"></select>
@@ -1698,6 +1732,93 @@
         <div id="t2-donuts" class="donut-grid"></div>
       </div>
     </section>
+    <!-- 3. FÜL: ELŐREJELZÉS ÉS KOCSISZÁM-JAVASLAT -->
+    <section id="tab3" class="tab-panel">
+      <div class="main-stack">
+        <div class="card controls-bar">
+          <div class="card-header" style="margin-bottom:0;">
+            <div>
+              <h2 class="card-title">Előrejelzés és kocsiszám-javaslat</h2>
+              <div id="t3-subtitle" class="card-subtitle"></div>
+            </div>
+            <div id="fc-cls" class="segmented">
+              <button class="seg-btn active" data-val="both" type="button">Mindkét osztály</button>
+              <button class="seg-btn" data-val="c2" type="button">2. osztály</button>
+              <button class="seg-btn" data-val="c1" type="button">1. osztály</button>
+            </div>
+          </div>
+          <div class="controls-row">
+            <div class="control-group">
+              <span class="control-label">Cél-kihasználtság:</span>
+              <input id="fc-target" class="num-input" type="number" min="50" max="100" step="1" aria-label="Cél-kihasználtság (%)">
+              <span class="unit-txt">%</span>
+            </div>
+            <div class="control-group" title="Vonatonként az adatból (a kapacitás lépcsőiből) olvasom ki az egység méretét; ahol nem lehet, ezt használom">
+              <span class="control-label">Alap egység:</span>
+              <span class="unit-txt">2. o.</span><input id="fc-unit-c2" class="num-input" type="number" min="10" max="400" step="1" aria-label="2. osztályú egység férőhely">
+              <span class="unit-txt">1. o.</span><input id="fc-unit-c1" class="num-input" type="number" min="10" max="400" step="1" aria-label="1. osztályú egység férőhely">
+              <span class="unit-txt">hely</span>
+            </div>
+            <label class="switch-toggle" title="Vonatonként az utolsó 12 hét közlekedési napra vetített foglalása a tavalyi azonos 12 héthez; a változás felét veszi figyelembe, ±10%-ra korlátozva">
+              <input id="fc-trend" type="checkbox" checked>
+              <span class="switch-track"></span>
+              <span>Trend alkalmazása (csillapított, max. ±10%)</span>
+            </label>
+          </div>
+          <div class="controls-row">
+            <div class="control-group" title="Opcionális: ha megadod, a javaslatoknál a kapacitáson felüli kereslet forintban is látszik">
+              <span class="control-label">Átlagos helyjegy-/pótjegyár:</span>
+              <span class="unit-txt">1. o.</span><input id="fc-price-c1" class="num-input" type="number" min="0" step="10" placeholder="Ft" aria-label="1. osztály átlagár">
+              <span class="unit-txt">2. o.</span><input id="fc-price-c2" class="num-input" type="number" min="0" step="10" placeholder="Ft" aria-label="2. osztály átlagár">
+              <span class="unit-txt">Ft/fő (opcionális)</span>
+            </div>
+            <input id="fc-search" class="search-input table-search" type="search" placeholder="Szűrés vonatnévre, számra, relációra...">
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Közelgő események – következő 12 hónap</h2>
+              <div class="card-subtitle">Iskolai szünetek, ünnepek és hosszú hétvégék, fesztiválok • a hálózati forgalom a tavalyi esemény és a körülötte lévő normál napok (±1–3 hét) arányából • kattints egy sorra a vonatszintű javaslatokhoz</div>
+            </div>
+          </div>
+          <div id="fc-events" class="table-wrap"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 id="fc-ev-title" class="card-title"></h2>
+              <div id="fc-ev-sub" class="card-subtitle"></div>
+            </div>
+          </div>
+          <div id="fc-ev-note" style="margin-bottom:10px;"></div>
+          <div id="fc-ev-table" class="table-wrap"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Normál hét – javasolt kocsiszám</h2>
+              <div id="fc-normal-sub" class="card-subtitle"></div>
+            </div>
+          </div>
+          <div id="fc-normal-table" class="table-wrap"></div>
+        </div>
+
+        <div class="card fc-method">
+          <h3>Hogyan számol?</h3>
+          <ul>
+            <li><strong>Eseményelőrejelzés:</strong> minden eseményhez a betöltött adatból a legutóbbi azonos esemény (pl. Sziget 2026 → Sziget 2027) tényleges vonatonkénti foglalása, az esemény kezdetéhez igazítva, a vonat csillapított trendjével szorozva (utolsó 12 hét YoY-változásának fele, legfeljebb ±10%). Két viszonyítás: a tavalyi tényleges összeállítás (ha ugyanúgy közlekedik) és a szezonális normál (a tavalyi esemény előtti/utáni hetek azonos napjainak medián férőhelye) – ez utóbbihoz képest adja a javasolt erősítést.</li>
+            <li><strong>Egység:</strong> a vonat kapacitásának történeti lépcsőiből (pl. 234 → 312 hely = 78 hely/egység, kocsi vagy motorvonat-egység). Ahol nem kiolvasható, az alapérték „(alap)” jelöléssel. A javaslat a teljes útvonalra szól, mert útközben nem lehet kocsit hozzá- vagy levenni.</li>
+            <li><strong>Kifogyott napok:</strong> ahol tavaly a foglalás elérte a kapacitást, a valódi kereslet nagyobb lehetett – ott a javaslat alsó becslés.</li>
+            <li><strong>Időpontok:</strong> iskolai szünetek a tanév rendjéről szóló rendeletekből, ünnepek és munkanap-áthelyezések a vonatkozó NGM-rendeletekből, fesztiválok a rendezők közleményeiből. A „becsült” időpontot a rendező/jogalkotó még nem hirdette ki.</li>
+            <li><strong>Korlátok:</strong> egyedi új esemény, helyszínváltás (pl. EFOTT 2027 Esztergom), menetrendváltás vagy pályafelújítás hatását a tavalyi minta nem tartalmazza.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
   </main>
 
   <footer class="app-footer">
@@ -1778,6 +1899,20 @@
           </div>
           <div id="status-pass" class="dropzone-status" style="color: var(--emerald);">✓ Betöltve: 34 havi rekord (Windows-1250)</div>
           <div id="error-pass" class="dropzone-error hidden"></div>
+        </div>
+        <div id="dz-km" class="dropzone">
+          <div class="dropzone-top">
+            <div>
+              <div class="dropzone-title">3. Viszonylati km-tábla (opcionális)</div>
+              <div class="dropzone-desc">Oszlopok: <code>vonatszám;km</code> vagy <code>induló;cél;km</code>. Betöltve km-súlyozott kihasználtságot és utaskm-et számol.</div>
+            </div>
+            <label class="btn btn-primary" style="cursor:pointer;">
+              Fájl kiválasztása
+              <input id="input-km" type="file" accept=".csv,.txt,.tsv" class="hidden">
+            </label>
+          </div>
+          <div id="status-km" class="dropzone-status hidden"></div>
+          <div id="error-km" class="dropzone-error hidden"></div>
         </div>
       </div>
       <div class="modal-foot">
@@ -1970,7 +2105,9 @@
         radarClass: 'seat',
         radarThreshold: 85,
         radarSortCol: 'overDays',
-        radarSortDir: 'desc'
+        radarSortDir: 'desc',
+        excludeRepl: true,        // vonatpótlásos járatok kizárása
+        wdExclEvents: false       // heti profil ünnepek/szünetek nélkül
       },
 
       t2: {
@@ -1981,6 +2118,12 @@
         zoomEnd: 100,
         dimmedSeries: new Set(),
         showPy: false
+      },
+
+      km: null,                   // { byNum, byPair, count } – opcionális km-tábla
+      fc: {
+        target: 85, unitC1: 54, unitC2: 80, useTrend: true,
+        priceC1: 0, priceC2: 0, cls: 'both', search: '', selected: null
       }
     };
 
@@ -2577,7 +2720,11 @@
           },
           pass: state.pass.map(function (r) {
             return [r.date, r.balSzem, r.bakSzem, r.mecSzem, r.balEt, r.bakEt, r.mecEt, r.balOssz, r.bakOssz, r.mecOssz];
-          })
+          }),
+          km: state.km,
+          settings: {
+            fc: { target: state.fc.target, unitC1: state.fc.unitC1, unitC2: state.fc.unitC2, useTrend: state.fc.useTrend, priceC1: state.fc.priceC1, priceC2: state.fc.priceC2 }
+          }
         };
 
         var comp = await compressPayload(dataObj);
@@ -2604,7 +2751,8 @@
           'toast-container', 'data-meta-summary', 'footer-right',
           't1-wd-legend', 't1-wd-stage', 't1-wd-insight', 't1-wd-heat-class',
           't1-dir-summary', 't1-radar-class', 't1-radar-summary',
-          'export-items', 'export-status', 'export-format-note'
+          'export-items', 'export-status', 'export-format-note',
+          't3-subtitle', 'fc-events', 'fc-ev-title', 'fc-ev-sub', 'fc-ev-note', 'fc-ev-table', 'fc-normal-sub', 'fc-normal-table'
         ];
         clearIds.forEach(function (id) {
           var el = clone.querySelector('#' + id);
@@ -2676,6 +2824,14 @@
       return days > 0 ? v / days : v;
     }
 
+    function routeReplOf(occ) {
+      if (occ._repl) return occ._repl;
+      var m = new Uint8Array(occ.routes.length);
+      for (var r = 0; r < occ.routes.length; r++) m[r] = normText(occ.routes[r][2]).indexOf('potlo') >= 0 ? 1 : 0;
+      occ._repl = m;
+      return m;
+    }
+
     function routeStrOf(rt) {
       return (rt[3] && rt[4]) ? (rt[3] + ' – ' + rt[4]) : (rt[3] || rt[4] || '—');
     }
@@ -2696,8 +2852,10 @@
       var hasNums  = t1.selectedNums.size > 0;
       var hasType  = t1.selectedType !== 'ALL';
 
+      var replMask = routeReplOf(occ);
       for (var r = 0; r < numRoutes; r++) {
         var rt = occ.routes[r];
+        if (t1.excludeRepl && replMask[r]) continue;
         if (hasType && rt[2] !== t1.selectedType) continue;
         if (hasNames && !t1.selectedNames.has(rt[1])) continue;
         if (hasNums && !t1.selectedNums.has(rt[0])) continue;
@@ -2721,6 +2879,8 @@
 
       var curTotals = new Float64Array(12);
       var pyTotals  = new Float64Array(12);
+      var routeKm = routeKmOf(occ);
+      var kmBk = 0, kmCap = 0, kmRouteBk = routeKm ? new Map() : null;
       var activeDates = new Uint8Array(numDates);
       var routeStats = new Map();
 
@@ -2742,6 +2902,13 @@
             var v = rows[i + 2 + k];
             curTotals[k] += v;
             rs[k] += v;
+          }
+          if (routeKm && routeKm[rIdx] > 0) {
+            var kmv = routeKm[rIdx];
+            var sb = rows[i + 3] + rows[i + 5] + rows[i + 13];
+            kmBk += sb * kmv;
+            kmCap += (rows[i + 2] + rows[i + 4] + rows[i + 12]) * kmv;
+            kmRouteBk.set(rIdx, (kmRouteBk.get(rIdx) || 0) + sb * kmv);
           }
         }
         if (pyDateMask[dIdx]) {
@@ -2901,6 +3068,8 @@
       // Heti profil + hőtérkép előkészítés
       var wdDays = null, wdTot = null, pyWdTot = null, pyWdDays = null, pyWdMask = null;
       var hmMonthIdx = null, hmMonths = null, hmTot = null, hmDays = null;
+      var wdExcl = (t1.wdExclEvents && wantWd) ? eventMaskFor(occ) : null;
+      var wdSkip = function (d) { return wdExcl ? (wdExcl[d] & 1) : 0; };
       if (wantWd && G > 0) {
         wdDays = new Float64Array(7);
         wdTot = new Float64Array(G * 7 * 12);
@@ -2908,7 +3077,7 @@
         hmMonths = [];
         var hmMap = new Map();
         for (var w0 = 0; w0 < numDates; w0++) {
-          if (!curDateMask[w0]) continue;
+          if (!curDateMask[w0] || wdSkip(w0)) continue;
           wdDays[occ.dateWd[w0]]++;
           var mk = occ.dateMonthKey[w0];
           var mi = hmMap.get(mk);
@@ -2918,7 +3087,7 @@
         hmTot = new Float64Array(hmMonths.length * 7 * 12);
         hmDays = new Float64Array(hmMonths.length * 7);
         for (var w1 = 0; w1 < numDates; w1++) {
-          if (curDateMask[w1]) hmDays[hmMonthIdx[w1] * 7 + occ.dateWd[w1]]++;
+          if (curDateMask[w1] && !wdSkip(w1)) hmDays[hmMonthIdx[w1] * 7 + occ.dateWd[w1]]++;
         }
         if (wantPy) {
           pyWdTot = new Float64Array(G * 7 * 12);
@@ -2927,7 +3096,7 @@
           for (var w2 = 0; w2 < numDates; w2++) {
             if (!curDateMask[w2]) continue;
             var p364 = occ.datePy364Idx[w2];
-            if (p364 >= 0 && !pyWdMask[p364]) { pyWdMask[p364] = 1; pyWdDays[occ.dateWd[p364]]++; }
+            if (p364 >= 0 && !pyWdMask[p364] && !wdSkip(p364) && !wdSkip(w2)) { pyWdMask[p364] = 1; pyWdDays[occ.dateWd[p364]]++; }
           }
         }
       }
@@ -2939,7 +3108,7 @@
         var pr = rows[p + 1];
         if (!routeMask[pr]) continue;
         var pd = rows[p];
-        if (hmTot && curDateMask[pd]) {
+        if (hmTot && curDateMask[pd] && hmMonthIdx[pd] >= 0 && !wdSkip(pd)) {
           var hoff = (hmMonthIdx[pd] * 7 + occ.dateWd[pd]) * 12;
           for (var hk = 0; hk < 12; hk++) hmTot[hoff + hk] += rows[p + 2 + hk];
         }
@@ -2957,7 +3126,7 @@
             for (var qk = 0; qk < 12; qk++) pyGBuckets[qoff + qk] += rows[p + 2 + qk];
           }
         }
-        if (wdTot && curDateMask[pd]) {
+        if (wdTot && curDateMask[pd] && !wdSkip(pd)) {
           var woff = (gi * 7 + occ.dateWd[pd]) * 12;
           for (var wk = 0; wk < 12; wk++) wdTot[woff + wk] += rows[p + 2 + wk];
         }
@@ -3084,7 +3253,8 @@
           c1Pct: c1.pct,
           c2Pct: c2.pct,
           premPct: prem.pct,
-          bikeBooked: bike.booked
+          bikeBooked: bike.booked,
+          pkm: kmRouteBk ? ((kmRouteBk.get(rIdx) || 0) / 1000) : null
         });
       });
 
@@ -3092,7 +3262,8 @@
 
       return {
         curTotals: curTotals, pyTotals: pyTotals, chartModel: chartModel, tableRows: tableRows,
-        weekday: weekday, dirSummary: dirSummary, radar: radar
+        weekday: weekday, dirSummary: dirSummary, radar: radar,
+        km: routeKm ? { bk: kmBk, cap: kmCap, pct: kmCap > 0 ? (kmBk / kmCap) * 100 : null } : null
       };
     }
 
@@ -3105,6 +3276,7 @@
       var cnt = new Int32Array(nD + 1);
       for (var i = 0; i < nR; i++) cnt[rows[i * STRIDE] + 1]++;
       for (var d = 0; d < nD; d++) cnt[d + 1] += cnt[d];
+      occ._dateStart = new Int32Array(cnt);
       var order = new Uint32Array(nR);
       for (var j = 0; j < nR; j++) order[cnt[rows[j * STRIDE]]++] = j;
       occ._dateOrder = order;
@@ -3120,14 +3292,14 @@
         t1.selectedType,
         Array.from(t1.selectedYears).sort().join(','),
         Array.from(t1.selectedMonths).sort().join(','),
-        t1.radarClass, t1.radarThreshold
+        t1.radarClass, t1.radarThreshold, t1.excludeRepl ? 1 : 0
       ].join('#');
       if (radarCache && radarCache.occ === occ && radarCache.sig === sig) return radarCache.res;
 
       var key = t1.radarClass;
       var thr = t1.radarThreshold;
       var nRt = occ.routes.length;
-      var days = new Int32Array(nRt), over = new Int32Array(nRt);
+      var days = new Int32Array(nRt), over = new Int32Array(nRt), sold = new Int32Array(nRt);
       var peakDate = new Int32Array(nRt).fill(-1), lastDate = new Int32Array(nRt).fill(-1);
       var sumCap = new Float64Array(nRt), sumBk = new Float64Array(nRt);
       var peak = new Float64Array(nRt).fill(-1);
@@ -3139,6 +3311,7 @@
           var pct = (pendBk[rr] / c) * 100;
           days[rr]++;
           if (pct >= thr) over[rr]++;
+          if (pendBk[rr] >= c) sold[rr]++;
           if (pct > peak[rr]) { peak[rr] = pct; peakDate[rr] = lastDate[rr]; }
           sumCap[rr] += c;
           sumBk[rr] += pendBk[rr];
@@ -3172,7 +3345,7 @@
         var rt = occ.routes[q];
         list.push({
           name: rt[1], num: rt[0], type: rt[2], routeStr: routeStrOf(rt),
-          days: days[q], overDays: over[q], overShare: (over[q] / days[q]) * 100,
+          days: days[q], overDays: over[q], overShare: (over[q] / days[q]) * 100, soldOut: sold[q],
           avgPct: (sumBk[q] / sumCap[q]) * 100,
           peakPct: peak[q], peakDate: peakDate[q] >= 0 ? occ.dates[peakDate[q]] : '',
           avgBooked: sumBk[q] / days[q], avgCap: sumCap[q] / days[q]
@@ -3314,6 +3487,7 @@
         return '<option value="' + c.key + '"' + (c.key === t1.radarClass ? ' selected' : '') + '>' + escHtml(c.label) + '</option>';
       }).join('');
       document.getElementById('t1-radar-thr').value = t1.radarThreshold;
+      document.getElementById('t1-excl-repl').checked = !!t1.excludeRepl;
     }
 
     function renderTab1Content() {
@@ -3345,7 +3519,8 @@
         '<div class="kpi-card" style="--kpi-accent:#0f766e">' +
           '<div class="kpi-label">Ülőhely kihasználtság %</div>' +
           '<div class="kpi-value">' + fmtPct(seatCur.pct) + '</div>' +
-          '<div class="kpi-subs"><span>1. oszt.: <strong>' + fmtPct(c1Cur.pct) + '</strong></span><span>2. oszt.: <strong>' + fmtPct(c2Cur.pct) + '</strong></span><span>Prémium: <strong>' + fmtPct(premCur.pct) + '</strong></span></div>' +
+          '<div class="kpi-subs"><span>1. oszt.: <strong>' + fmtPct(c1Cur.pct) + '</strong></span><span>2. oszt.: <strong>' + fmtPct(c2Cur.pct) + '</strong></span><span>Prémium: <strong>' + fmtPct(premCur.pct) + '</strong></span>' +
+            (res.km ? '<span>Km-súlyozott: <strong>' + fmtPct(res.km.pct) + '</strong></span><span>Utaskm: <strong>' + fmtInt(res.km.bk / 1000) + ' ezer</strong></span>' : '') + '</div>' +
         '</div>' +
         '<div class="kpi-card" style="--kpi-accent:' + (yoyPp !== null && yoyPp < 0 ? '#e11d48' : '#059669') + '">' +
           '<div class="kpi-label">Kihasználtság YoY (%p)</div>' +
@@ -3428,6 +3603,8 @@
         var eIdx = Math.min(totalPts - 1, Math.max(sIdx, Math.ceil((t1.zoomEnd / 100) * (totalPts - 1))));
         var xSlice = chartModel.xKeys.slice(sIdx, eIdx + 1);
 
+        var bands = (chartModel.gran === 'day') ? eventBands(xSlice) : null;
+        if (bands && bands.length) pyNote = (pyNote ? pyNote + ' • ' : '') + 'Sávok: kék = iskolai szünet, narancs = ünnep, lila = fesztivál';
         var sliceS = function (s) {
           return {
             id: s.id, name: s.name, color: s.color, unit: s.unit,
@@ -3444,7 +3621,7 @@
           renderSvgLineChart(stage, {
             xKeys: xSlice, gran: chartModel.gran, series: chartModel.series.map(sliceS),
             isPercent: isPct, height: 315, showMarkers: xSlice.length <= 36,
-            fmtVal: fmtVal, fmtSub: fmtSub, threshold: threshold
+            fmtVal: fmtVal, fmtSub: fmtSub, threshold: threshold, bands: bands
           });
         } else {
           // Small Multiples (2 oszlopos rács, szinkronizált Y-skála)
@@ -3478,7 +3655,7 @@
               xKeys: xSlice, gran: chartModel.gran, series: p.series.map(sliceS),
               isPercent: isPct, forcedYMax: sharedMax, height: 215,
               compact: true, showMarkers: xSlice.length <= 24,
-              fmtVal: fmtVal, fmtSub: fmtSub, threshold: threshold
+              fmtVal: fmtVal, fmtSub: fmtSub, threshold: threshold, bands: bands
             });
           });
         }
@@ -3503,6 +3680,26 @@
       renderTab1DirSummary(res.dirSummary);
       renderTab1Weekday(res.weekday);
       renderTab1Table(tableRows, res.radar);
+    }
+
+    function eventBands(xKeys) {
+      if (!xKeys.length) return [];
+      var pos = new Map();
+      xKeys.forEach(function (k, i) { pos.set(k, i); });
+      var first = xKeys[0], last = xKeys[xKeys.length - 1];
+      var out = [];
+      EVENT_OCCS.forEach(function (ev) {
+        if (ev.end < first || ev.start > last) return;
+        var i0 = null, i1 = null;
+        isoRange(ev.start < first ? first : ev.start, ev.end > last ? last : ev.end).forEach(function (d) {
+          var i = pos.get(d);
+          if (i === undefined) return;
+          if (i0 === null) i0 = i;
+          i1 = i;
+        });
+        if (i0 !== null) out.push({ i0: i0, i1: i1, color: EVENT_TYPES[ev.type].band, label: ev.name.split(' (')[0] });
+      });
+      return out;
     }
 
     function appendLegendNotes(container, pyNote, threshold) {
@@ -3572,6 +3769,8 @@
         b.classList.toggle('active', b.dataset.val === t1.weekdayView);
       });
       document.getElementById('t1-wd-heat-wrap').classList.toggle('hidden', !isHeat);
+      document.getElementById('t1-wd-excl').checked = !!t1.wdExclEvents;
+      var exclTxt = t1.wdExclEvents ? ' • ünnepek, hosszú hétvégék és iskolai szünetek nélkül' : '';
 
       var stage = document.getElementById('t1-wd-stage');
       var legend = document.getElementById('t1-wd-legend');
@@ -3606,7 +3805,7 @@
 
       if (!isHeat) {
         sub.textContent = 'Hét napja szerinti ' + metricTxt + ' a szűrt időszakban • a hét napja a közlekedési dátumból számítva' +
-          (t1.showPy ? ' • szaggatott keret: előző év azonos hétnapjai (−364 nap)' : '');
+          (t1.showPy ? ' • szaggatott keret: előző év azonos hétnapjai (−364 nap)' : '') + exclTxt;
         if (wd.series.length > 1) renderLegend(legend, wd.series, t1.dimmedSeries, renderTab1Content);
         else legend.innerHTML = '';
         var barThr = (t1.radarMode !== 'off' && isPct) ? t1.radarThreshold : null;
@@ -3625,7 +3824,7 @@
       } else {
         var hcd = CLASS_DEFS.find(function (c) { return c.key === wd.heatKey; }) || CLASS_DEFS[0];
         var hUnit = unitOf(hcd.key);
-        sub.textContent = 'Hónap × hét napja • ' + hcd.label + ' – ' + metricTxt + ' • a teljes szűrt járatkörre';
+        sub.textContent = 'Hónap × hét napja • ' + hcd.label + ' – ' + metricTxt + ' • a teljes szűrt járatkörre' + exclTxt;
         legend.innerHTML = '';
         var hFmt = function (v) { return fmtVal(v, { unit: hUnit }); };
         var best = null, worst = null, overCnt = 0;
@@ -3712,6 +3911,7 @@
           { key: 'days',      label: 'Közl. napok',         num: true,  render: function (r) { return fmtInt(r.days); } },
           { key: 'overDays',  label: thr + '%+ napok',      num: true,  render: function (r) { return r.overDays > 0 ? '<strong style="color:#be123c">' + fmtInt(r.overDays) + '</strong>' : '0'; } },
           { key: 'overShare', label: thr + '%+ arány',      num: true,  render: function (r) { return fmtPct(r.overShare); } },
+          { key: 'soldOut',   label: 'Kifogyott napok',     num: true,  render: function (r) { return r.soldOut > 0 ? '<strong style="color:#9f1239">' + fmtInt(r.soldOut) + '</strong>' : '0'; } },
           { key: 'avgPct',    label: 'Átlag %',             num: true,  render: function (r) { return fmtOccPill(r.avgPct); } },
           { key: 'peakPct',   label: 'Csúcs %',             num: true,  render: function (r) { return fmtOccPill(r.peakPct); } },
           { key: 'peakDate',  label: 'Csúcsnap',            num: false, render: function (r) { return r.peakDate ? (r.peakDate.replace(/-/g, '.') + '. (' + WEEKDAYS_SHORT[(new Date(r.peakDate + 'T00:00:00Z').getUTCDay() + 6) % 7] + ')') : '—'; } },
@@ -3724,12 +3924,13 @@
         var sHtml = '';
         if (t1.radarMode === 'over') {
           var topOver = rows.slice().sort(function (a, b) { return b.overDays - a.overDays; }).slice(0, 3);
-          var sumOver = 0, sumDays = 0;
-          rows.forEach(function (r) { sumOver += r.overDays; });
+          var sumOver = 0, sumDays = 0, sumSold = 0;
+          rows.forEach(function (r) { sumOver += r.overDays; sumSold += r.soldOut; });
           src.forEach(function (r) { sumDays += r.days; });
           sHtml = '<strong>' + fmtInt(rows.length) + ' járat</strong> összesen <strong>' + fmtInt(sumOver) + ' járatnapon</strong> érte el vagy lépte át a ' + thr + '%-os ' + escHtml(rcd.label.toLowerCase()) + ' kihasználtságot' +
             (sumDays > 0 ? ' (a ' + fmtInt(sumDays) + ' járatnap ' + fmtPct((sumOver / sumDays) * 100) + '-a)' : '') + '.' +
-            (topOver.length ? ' Leggyakrabban: ' + topOver.map(function (r) { return escHtml(r.name) + ' ' + escHtml(r.num) + ' (' + r.overDays + ' nap)'; }).join(', ') + '.' : '');
+            (topOver.length ? ' Leggyakrabban: ' + topOver.map(function (r) { return escHtml(r.name) + ' ' + escHtml(r.num) + ' (' + r.overDays + ' nap)'; }).join(', ') + '.' : '') +
+            (sumSold ? ' Ebből <strong>' + fmtInt(sumSold) + ' kifogyott járatnap</strong>: ezeken a valódi kereslet nem látszik, csak az, hogy elfogyott a hely.' : '');
           summaryEl.classList.remove('cool');
         } else if (rows.length) {
           var lo = Math.min.apply(null, rows.map(function (r) { return r.avgPct; }));
@@ -3760,6 +3961,7 @@
           { key: 'premPct',    label: 'Prémium %',          num: true,  render: function (r) { return fmtOccPill(r.premPct); } },
           { key: 'bikeBooked', label: 'Kerékpár db',        num: true,  render: function (r) { return fmtInt(r.bikeBooked); } }
         ];
+        if (state.km) cols.push({ key: 'pkm', label: 'Utaskm (ezer)', num: true, render: function (r) { return r.pkm ? fmtInt(r.pkm) : '<span class="occ-none">—</span>'; } });
         titleEl.textContent = 'Járatonkénti részletező táblázat';
         summaryEl.classList.add('hidden');
         summaryEl.innerHTML = '';
@@ -4141,6 +4343,19 @@
         xSvg += '<text x="' + xPos(n - 1).toFixed(1) + '" y="' + (H - 10) + '" text-anchor="end" font-size="' + (compact ? 10 : 11) + '" fill="#64748b">' + escHtml(formatAxisDate(xKeys[n - 1], gran)) + '</text>';
       }
 
+      // Eseménysávok (napi bontásnál)
+      var bandSvg = '';
+      if (opts.bands && opts.bands.length && n > 1) {
+        var half = plotW / (n - 1) / 2;
+        opts.bands.forEach(function (bd) {
+          var x0 = Math.max(pad.left, xPos(bd.i0) - half), x1 = Math.min(pad.left + plotW, xPos(bd.i1) + half);
+          bandSvg += '<rect x="' + x0.toFixed(1) + '" y="' + pad.top + '" width="' + Math.max(1, x1 - x0).toFixed(1) + '" height="' + plotH + '" fill="' + bd.color + '"><title>' + escHtml(bd.label) + '</title></rect>';
+          if (!compact && x1 - x0 > 46) {
+            bandSvg += '<text x="' + ((x0 + x1) / 2).toFixed(1) + '" y="' + (pad.top + 11) + '" text-anchor="middle" font-size="9.5" fill="#475569">' + escHtml(bd.label.length > 16 ? bd.label.slice(0, 15) + '…' : bd.label) + '</text>';
+          }
+        });
+      }
+
       // Küszöbvonal (kapacitás-radar)
       var thrSvg = '';
       if (threshold) {
@@ -4225,7 +4440,7 @@
       container.innerHTML =
         '<svg class="chart-svg" viewBox="0 0 ' + W + ' ' + H + '">' +
           '<defs>' + defsSvg + '</defs>' +
-          gridSvg + xSvg + thrSvg + pySvg + pathsSvg + overSvg +
+          bandSvg + gridSvg + xSvg + thrSvg + pySvg + pathsSvg + overSvg +
           '<line class="h-line" x1="0" y1="' + pad.top + '" x2="0" y2="' + (pad.top + plotH) + '" stroke="#0b2e59" stroke-width="1.2" stroke-dasharray="4 3" style="display:none;pointer-events:none;" />' +
           '<g class="h-dots" style="pointer-events:none;"></g>' +
           '<rect class="h-overlay" x="' + pad.left + '" y="' + pad.top + '" width="' + plotW + '" height="' + plotH + '" fill="transparent" style="cursor:crosshair;" />' +
@@ -4599,7 +4814,10 @@
       { key: 't1table',  group: 'Járat- és kocsiosztály-elemző', label: 'Részletező / radar táblázat (aktuális oldal első 15 sora)', file: 'tablazat', def: false },
       { key: 't2kpi',    group: 'Turisztikai napijegyek', label: 'KPI-kártyák', file: 'napijegy_kpi', def: true },
       { key: 't2chart',  group: 'Turisztikai napijegyek', label: 'Havi értékesítés grafikon', file: 'napijegy_grafikon', def: true },
-      { key: 't2donut',  group: 'Turisztikai napijegyek', label: 'Csatorna mix (fánkdiagramok)', file: 'csatorna_mix', def: false }
+      { key: 't2donut',  group: 'Turisztikai napijegyek', label: 'Csatorna mix (fánkdiagramok)', file: 'csatorna_mix', def: false },
+      { key: 't3events', group: 'Előrejelzés és kocsiszám-javaslat', label: 'Közelgő események (12 hónap)', file: 'esemenyek', def: true },
+      { key: 't3event',  group: 'Előrejelzés és kocsiszám-javaslat', label: 'Kiválasztott esemény javaslatai (első 10 sor)', file: 'esemeny_javaslat', def: true },
+      { key: 't3normal', group: 'Előrejelzés és kocsiszám-javaslat', label: 'Normál hét – javasolt kocsiszám (első 12 sor)', file: 'normal_het', def: false }
     ];
 
     var exportState = {
@@ -4651,7 +4869,10 @@
 
     /* ---- Szöveg- és színsegédek ---- */
     function txt(el) {
-      return el ? el.textContent.replace(/\s+/g, ' ').trim() : '';
+      if (!el) return '';
+      var c = el.cloneNode(true);
+      c.querySelectorAll('br').forEach(function (b) { b.replaceWith(' '); });
+      return c.textContent.replace(/\s+/g, ' ').trim();
     }
 
     function spansText(el) {
@@ -5290,6 +5511,35 @@
           spec: { legend: readLegend(id('t2-chart-legend')), extra: [], body: imgBody(await svgToImage(s3)) }
         };
       }
+      if (key === 't3events' || key === 't3event' || key === 't3normal') {
+        renderTab3();
+        if (key === 't3events') {
+          var te = id('fc-events').querySelector('table');
+          if (!te) return null;
+          var tmE = tableModel(te);
+          var typeLabels = Object.keys(EVENT_TYPES).map(function (k) { return EVENT_TYPES[k].label; });
+          // gomb oszlop el; típuscímke le a névről; forrás a dátumhoz fűzve (rövidebb sorok a dián)
+          tmE.head = [tmE.head[0], tmE.head[1]].concat(tmE.head.slice(3, -1));
+          tmE.rows = tmE.rows.map(function (r) {
+            var name = Object.assign({}, r[0]);
+            typeLabels.forEach(function (l) { if (name.text.indexOf(l) === 0) name.text = name.text.slice(l.length).trim(); });
+            var date = Object.assign({}, r[1]);
+            if (r[2].text.indexOf('becsült') >= 0) date.text += ' – becsült';
+            return [name, date].concat(r.slice(3, -1));
+          });
+          return { key: key, tab: 't3', kind: 'table', title: 'Közelgő események – várható forgalom és bővítési igény', subtitle: txt(id('t3-subtitle')), headline: '', table: tmE };
+        }
+        if (key === 't3event') {
+          var tv = id('fc-ev-table').querySelector('table');
+          if (!tv) return null;
+          var tmV = tableModel(tv, 10);
+          tmV.rows.forEach(function (r) { var last = r[r.length - 1]; if (last && last.text.length > 70) last.text = last.text.slice(0, 68) + '…'; });
+          return { key: key, tab: 't3', kind: 'table', title: txt(id('fc-ev-title')), subtitle: txt(id('fc-ev-sub')), headline: txt(id('fc-ev-note')), table: tmV };
+        }
+        var tn = id('fc-normal-table').querySelector('table');
+        if (!tn) return null;
+        return { key: key, tab: 't3', kind: 'table', title: 'Normál hét – javasolt kocsiszám', subtitle: txt(id('fc-normal-sub')), headline: '', table: tableModel(tn, 12) };
+      }
       if (key === 't2donut') {
         return {
           key: key, tab: 't2', kind: 'image', title: 'Turisztikai napijegyek – értékesítési csatorna mix',
@@ -5382,7 +5632,7 @@
         slide.addText(cap.headline, { x: x, y: yy, w: w, h: 0.45, fontFace: PPT_FONT, fontSize: 10.5, color: '334155', valign: 'top', margin: 0, fit: 'shrink' });
         yy += 0.5;
       }
-      var fs = m.head.length > 9 ? 7.5 : 9.5;
+      var fs = m.head.length > 9 ? 7.5 : (m.rows.length > 12 ? 8.5 : 9.5);
       var rows = [m.head.map(function (hd) {
         return { text: hd.text, options: { bold: true, color: '0B2E59', fill: { color: 'F1F5F9' }, align: hd.align } };
       })];
@@ -5493,6 +5743,681 @@
     }
 
     /* =========================================================================
+       ESEMÉNYNAPTÁR (2024–2027), ELŐREJELZÉS ÉS KOCSISZÁM-JAVASLAT
+       Források: tanév rendjéről szóló rendeletek (2023/24–2026/27), NGM munkanap-
+       áthelyezési rendeletek (2024–2026), rendezők közleményei. A „becsült” időpontot
+       a rendező még nem hirdette ki – a korábbi évek mintája alapján valószínűsített.
+       ========================================================================= */
+    var EVENT_TYPES = {
+      school:   { label: 'Iskolai szünet',          color: '#0284c7', band: 'rgba(2,132,199,0.09)' },
+      holiday:  { label: 'Ünnep / hosszú hétvége',  color: '#d97706', band: 'rgba(217,119,6,0.11)' },
+      festival: { label: 'Fesztivál / rendezvény',  color: '#7c3aed', band: 'rgba(124,58,237,0.08)' }
+    };
+
+    var EVENT_CALENDAR = [
+      { fam: 'teli', type: 'school', name: 'Téli szünet (karácsony, újév)', occ: [
+        ['2023-12-22', '2024-01-07'], ['2024-12-21', '2025-01-05'], ['2025-12-20', '2026-01-04'], ['2026-12-19', '2027-01-03']] },
+      { fam: 'tavaszi', type: 'school', name: 'Tavaszi szünet + húsvét', occ: [
+        ['2024-03-28', '2024-04-07'], ['2025-04-17', '2025-04-27'], ['2026-04-02', '2026-04-12'], ['2027-03-25', '2027-04-04']] },
+      { fam: 'oszi', type: 'school', name: 'Őszi szünet (okt. 23., mindenszentek)', occ: [
+        ['2024-10-26', '2024-11-03'], ['2025-10-23', '2025-11-02'], ['2026-10-23', '2026-11-01'],
+        ['2027-10-23', '2027-11-01', 'becsült', 'A 2027/28-as tanév rendje még nem jelent meg; okt. 23. és nov. 1. alapján becsülve.']] },
+      { fam: 'marc15', type: 'holiday', name: 'Március 15.', occ: [
+        ['2024-03-15', '2024-03-17'], ['2025-03-15', '2025-03-16'], ['2026-03-14', '2026-03-15'], ['2027-03-13', '2027-03-15']] },
+      { fam: 'maj1', type: 'holiday', name: 'Május 1.', occ: [
+        ['2024-05-01', '2024-05-01'], ['2025-05-01', '2025-05-04'], ['2026-05-01', '2026-05-03'], ['2027-05-01', '2027-05-02']] },
+      { fam: 'punkosd', type: 'holiday', name: 'Pünkösd', occ: [
+        ['2024-05-18', '2024-05-20'], ['2025-06-07', '2025-06-09'], ['2026-05-23', '2026-05-25'], ['2027-05-15', '2027-05-17']] },
+      { fam: 'aug20', type: 'holiday', name: 'Augusztus 20.', occ: [
+        ['2024-08-17', '2024-08-20'], ['2025-08-20', '2025-08-20'], ['2026-08-20', '2026-08-23'], ['2027-08-20', '2027-08-22']] },
+      { fam: 'fishing', type: 'festival', name: 'Fishing on Orfű (Pécs)', occ: [
+        ['2024-06-26', '2024-06-29'], ['2025-06-25', '2025-06-28'], ['2026-06-24', '2026-06-27'],
+        ['2027-06-23', '2027-06-26', 'becsült', 'Június utolsó szerda–szombat mintája alapján.']] },
+      { fam: 'efott', type: 'festival', name: 'EFOTT', occ: [
+        ['2024-07-10', '2024-07-14'], ['2025-07-09', '2025-07-13'], ['2026-07-08', '2026-07-12'],
+        ['2027-07-08', '2027-07-11', 'hivatalos', '2027-től Esztergomban: a tavalyi (Velencei-tó) minta más vonalat terhelt, ezért erre az eseményre a járatszintű előrejelzés nem érvényes.']] },
+      { fam: 'campus', type: 'festival', name: 'Campus Fesztivál (Debrecen)', occ: [
+        ['2024-07-24', '2024-07-28'], ['2025-07-16', '2025-07-20'], ['2026-07-22', '2026-07-26'],
+        ['2027-07-21', '2027-07-25', 'becsült', 'Júliusi szerda–vasárnap minta alapján.']] },
+      { fam: 'mvolgye', type: 'festival', name: 'Művészetek Völgye (Kapolcs)', occ: [
+        ['2024-07-19', '2024-07-28'], ['2025-07-18', '2025-07-27'], ['2026-07-24', '2026-08-02'], ['2027-07-23', '2027-08-01']] },
+      { fam: 'f1', type: 'festival', name: 'F1 Magyar Nagydíj (Mogyoród)', occ: [
+        ['2024-07-19', '2024-07-21'], ['2025-08-01', '2025-08-03'], ['2026-07-24', '2026-07-26'],
+        ['2027-07-30', '2027-08-01', 'becsült', 'A 2027-es F1-versenynaptár még nem hivatalos.']] },
+      { fam: 'sziget', type: 'festival', name: 'Sziget (Budapest)', occ: [
+        ['2024-08-07', '2024-08-12'], ['2025-08-06', '2025-08-11'], ['2026-08-11', '2026-08-15'], ['2027-08-10', '2027-08-14']] },
+      { fam: 'strand', type: 'festival', name: 'STRAND (Zamárdi)', occ: [
+        ['2024-08-22', '2024-08-24'], ['2025-08-20', '2025-08-23'], ['2026-08-19', '2026-08-22'],
+        ['2027-08-18', '2027-08-21', 'becsült', 'Augusztus 20. környéki szerda–szombat minta alapján.']] },
+      { fam: 'szin', type: 'festival', name: 'SZIN (Szeged)', occ: [
+        ['2025-08-27', '2025-08-30'], ['2026-08-26', '2026-08-29'],
+        ['2027-08-25', '2027-08-28', 'becsült', 'Augusztus utolsó szerda–szombat mintája alapján.']] }
+    ];
+
+    // Ablak: az esemény előtti utazási nap (+ fesztiválnál a záró utáni hazautazási nap)
+    var EVENT_PAD = { school: [1, 0], holiday: [1, 0], festival: [1, 1] };
+
+    function isoAdd(iso, days) {
+      return new Date(Date.parse(iso + 'T00:00:00Z') + days * 86400000).toISOString().slice(0, 10);
+    }
+    function isoDiff(a, b) {
+      return Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400000);
+    }
+    function isoRange(a, b) {
+      var out = [];
+      for (var d = a; d <= b; d = isoAdd(d, 1)) out.push(d);
+      return out;
+    }
+    function isoWd(iso) {
+      return (new Date(iso + 'T00:00:00Z').getUTCDay() + 6) % 7;
+    }
+    function huDay(iso) {
+      return MONTHS_FULL[+iso.slice(5, 7) - 1].slice(0, 3) + '. ' + (+iso.slice(8, 10)) + '.';
+    }
+    function huRange(a, b) {
+      var y = a.slice(0, 4);
+      if (a === b) return y + '. ' + huDay(a) + ' (' + WEEKDAYS_SHORT[isoWd(a)] + ')';
+      if (a.slice(0, 7) === b.slice(0, 7)) {
+        return y + '. ' + MONTHS_FULL[+a.slice(5, 7) - 1].slice(0, 3) + '. ' + (+a.slice(8, 10)) + '–' + (+b.slice(8, 10)) + '. (' + WEEKDAYS_SHORT[isoWd(a)] + '–' + WEEKDAYS_SHORT[isoWd(b)] + ')';
+      }
+      return y + '. ' + huDay(a) + ' – ' + (b.slice(0, 4) !== y ? b.slice(0, 4) + '. ' : '') + huDay(b) + ' (' + WEEKDAYS_SHORT[isoWd(a)] + '–' + WEEKDAYS_SHORT[isoWd(b)] + ')';
+    }
+    function compactDates(list) {
+      if (!list.length) return '—';
+      var parts = [];
+      var s = list[0], p = list[0];
+      for (var i = 1; i <= list.length; i++) {
+        var d = list[i];
+        if (d && isoDiff(p, d) === 1) { p = d; continue; }
+        parts.push(s === p ? huDay(s) : (s.slice(0, 7) === p.slice(0, 7) ? (huDay(s).replace(/\.$/, '') + '–' + (+p.slice(8, 10)) + '.') : (huDay(s) + ' – ' + huDay(p))));
+        s = d; p = d;
+      }
+      return parts.join(', ');
+    }
+
+    var EVENT_OCCS = (function () {
+      var out = [];
+      EVENT_CALENDAR.forEach(function (fam) {
+        fam.occ.forEach(function (o) {
+          var pad = EVENT_PAD[fam.type];
+          out.push({
+            id: fam.fam + '_' + o[0], fam: fam.fam, type: fam.type, name: fam.name,
+            start: o[0], end: o[1], src: o[2] || 'hivatalos', note: o[3] || '',
+            wStart: isoAdd(o[0], -pad[0]), wEnd: isoAdd(o[1], pad[1])
+          });
+        });
+      });
+      return out.sort(function (a, b) { return a.start.localeCompare(b.start); });
+    })();
+
+    function dateIdxOf(occ) {
+      if (!occ._dateIdx) {
+        var m = new Map();
+        occ.dates.forEach(function (d, i) { m.set(d, i); });
+        occ._dateIdx = m;
+      }
+      return occ._dateIdx;
+    }
+
+    // bit 1: ünnep / iskolai szünet ablak, bit 2: fesztivál ablak
+    function eventMaskFor(occ) {
+      if (occ._evMask) return occ._evMask;
+      var mask = new Uint8Array(occ.dates.length);
+      var idx = dateIdxOf(occ);
+      EVENT_OCCS.forEach(function (ev) {
+        isoRange(ev.wStart, ev.wEnd).forEach(function (d) {
+          var i = idx.get(d);
+          if (i !== undefined) mask[i] |= (ev.type === 'festival' ? 2 : 1);
+        });
+      });
+      occ._evMask = mask;
+      return mask;
+    }
+
+    function getDateStarts(occ) {
+      getDateOrder(occ);
+      return occ._dateStart;
+    }
+
+    /* ---- Vonatmodell: járatszám + vonatnév; busz és vonatpótlás nélkül ---- */
+    // Egység (kocsi vagy motorvonat-egység) a kapacitás gyakori szintjei közti különbségből,
+    // csak valószerű kocsiméret-tartományban (2. o. 55–90, 1. o. 40–70 hely); a kis ingadozás zaj.
+    function inferUnit(levels, lo, hi) {
+      var tot = 0;
+      levels.forEach(function (cnt) { tot += cnt; });
+      var lv = [];
+      levels.forEach(function (cnt, cap) { if (cnt >= Math.max(5, tot * 0.03)) lv.push([cap, cnt]); });
+      var w = new Map();
+      for (var i = 0; i < lv.length; i++) {
+        for (var j = 0; j < lv.length; j++) {
+          var df = lv[j][0] - lv[i][0];
+          if (df < lo || df > hi) continue;
+          w.set(df, (w.get(df) || 0) + Math.min(lv[i][1], lv[j][1]));
+        }
+      }
+      var best = 0, bw = 0;
+      w.forEach(function (v, df) { if (v > bw) { bw = v; best = df; } });
+      return best;
+    }
+
+    function trainModel(occ) {
+      if (occ._trains) return occ._trains;
+      var R = occ.routes;
+      var map = new Map(), trains = [];
+      var routeTrain = new Int32Array(R.length).fill(-1);
+      for (var r = 0; r < R.length; r++) {
+        var ty = normText(R[r][2]);
+        if (/busz|\bbus\b|potlo|\*\*\*/.test(ty)) continue;
+        var key = R[r][0] + '|' + R[r][1];
+        var t = map.get(key);
+        if (t === undefined) {
+          t = trains.length;
+          map.set(key, t);
+          trains.push({ num: R[r][0], name: R[r][1], type: R[r][2], routes: [] });
+        }
+        routeTrain[r] = t;
+        trains[t].routes.push(r);
+      }
+      var T = trains.length;
+      var lv1 = [], lv2 = [];
+      for (var k = 0; k < T; k++) { lv1.push(new Map()); lv2.push(new Map()); }
+      var rcount = new Int32Array(R.length);
+      var rows = occ.rowsFlat;
+      for (var i = 0; i < rows.length; i += STRIDE) {
+        var rr = rows[i + 1];
+        var tt = routeTrain[rr];
+        if (tt < 0) continue;
+        rcount[rr]++;
+        if (rows[i + 2] > 0) lv1[tt].set(rows[i + 2], (lv1[tt].get(rows[i + 2]) || 0) + 1);
+        if (rows[i + 4] > 0) lv2[tt].set(rows[i + 4], (lv2[tt].get(rows[i + 4]) || 0) + 1);
+      }
+      var units = new Float64Array(T * 2);
+      trains.forEach(function (tr, ti) {
+        var best = tr.routes[0];
+        tr.routes.forEach(function (x) { if (rcount[x] > rcount[best]) best = x; });
+        var rt = R[best];
+        tr.routeStr = (rt[3] || rt[4]) ? (cleanStation(rt[3]) + ' – ' + cleanStation(rt[4])) : '—';
+        units[ti * 2] = inferUnit(lv1[ti], 40, 70);
+        units[ti * 2 + 1] = inferUnit(lv2[ti], 55, 90);
+      });
+      occ._trains = { trains: trains, routeTrain: routeTrain, units: units };
+      return occ._trains;
+    }
+
+    // Napi összegek (osztályonként) dátumlistára, vonatonként: [c1cap, c1bk, c2cap, c2bk] × pozíció
+    function aggDates(occ, dIdxs, tm) {
+      var starts = getDateStarts(occ);
+      var order = occ._dateOrder;
+      var rows = occ.rowsFlat;
+      var n = dIdxs.length;
+      var res = new Map();
+      for (var p = 0; p < n; p++) {
+        var d = dIdxs[p];
+        if (d < 0) continue;
+        for (var k = starts[d]; k < starts[d + 1]; k++) {
+          var off = order[k] * STRIDE;
+          var t = tm.routeTrain[rows[off + 1]];
+          if (t < 0) continue;
+          var a = res.get(t);
+          if (!a) { a = new Float64Array(n * 4); res.set(t, a); }
+          var o = p * 4;
+          a[o] += rows[off + 2]; a[o + 1] += rows[off + 3]; a[o + 2] += rows[off + 4]; a[o + 3] += rows[off + 5];
+        }
+      }
+      return res;
+    }
+
+    function idxListFor(occ, a, b) {
+      var idx = dateIdxOf(occ);
+      return isoRange(a, b).map(function (d) { var v = idx.get(d); return v === undefined ? -1 : v; });
+    }
+
+    function median(arr) {
+      if (!arr.length) return 0;
+      var s = arr.slice().sort(function (x, y) { return x - y; });
+      return s[Math.floor((s.length - 1) / 2)];
+    }
+    function quantile(arr, q) {
+      if (!arr.length) return 0;
+      var s = arr.slice().sort(function (x, y) { return x - y; });
+      var pos = (s.length - 1) * q, lo = Math.floor(pos), hi = Math.ceil(pos);
+      return s[lo] + (s[hi] - s[lo]) * (pos - lo);
+    }
+
+    /* ---- Alapmodell: jelenlegi összeállítás, trend, napi hálózati foglalás ---- */
+    function baseModel(occ, tm) {
+      if (occ._fcBase && occ._fcBase.tm === tm) return occ._fcBase;
+      var nD = occ.dates.length;
+      var last = occ.dates[nD - 1];
+      var T = tm.trains.length;
+
+      var recent = idxListFor(occ, isoAdd(last, -55), last);
+      var recentAgg = aggDates(occ, recent, tm);
+      var capNow = new Float64Array(T * 2);
+      recentAgg.forEach(function (a, t) {
+        for (var ci = 0; ci < 2; ci++) {
+          var vals = [];
+          for (var p = 0; p < recent.length; p++) { var c = a[p * 4 + ci * 2]; if (c > 0) vals.push(c); }
+          if (vals.length) capNow[t * 2 + ci] = median(vals);
+        }
+      });
+
+      var cur = idxListFor(occ, isoAdd(last, -83), last);
+      var py = cur.map(function (d) { return d >= 0 ? occ.datePy364Idx[d] : -1; });
+      var aCur = aggDates(occ, cur, tm), aPy = aggDates(occ, py, tm);
+      // Közlekedési napra vetített átlag (a hiányzó napok / lefedettségváltozás ne torzítson)
+      function perRunDay(a, n) {
+        var s = 0, d = 0;
+        for (var p = 0; p < n; p++) { if (a[p * 4] + a[p * 4 + 2] > 0) { s += a[p * 4 + 1] + a[p * 4 + 3]; d++; } }
+        return d >= 10 ? { avg: s / d, sum: s } : null;
+      }
+      var netC = 0, netP = 0;
+      var trend = new Float64Array(T).fill(NaN);
+      aCur.forEach(function (a, t) {
+        var c = perRunDay(a, cur.length);
+        var pa = aPy.get(t);
+        var pv = pa ? perRunDay(pa, py.length) : null;
+        if (c && pv) { netC += c.avg; netP += pv.avg; }
+        if (c && pv && pv.sum >= 300 && pv.avg > 0) trend[t] = c.avg / pv.avg;
+      });
+      var netTrend = netP > 0 ? Math.min(1.25, Math.max(0.8, netC / netP)) : 1;
+      for (var t = 0; t < T; t++) {
+        // csillapított trend: a YoY-változás fele, ±10%-ra korlátozva (egy évre előre vetítve konzervatív)
+        trend[t] = Number.isFinite(trend[t]) ? Math.min(1.1, Math.max(0.9, 1 + 0.5 * (trend[t] - 1))) : 1;
+      }
+
+      var dayBk = new Float64Array(nD);
+      var rows = occ.rowsFlat;
+      for (var i = 0; i < rows.length; i += STRIDE) {
+        if (tm.routeTrain[rows[i + 1]] < 0) continue;
+        dayBk[rows[i]] += rows[i + 3] + rows[i + 5];
+      }
+
+      occ._fcBase = { tm: tm, capNow: capNow, trend: trend, netTrend: netTrend, dayBk: dayBk, recent: recent, recentAgg: recentAgg, last: last };
+      return occ._fcBase;
+    }
+
+    function analogFor(ev, occ) {
+      var first = occ.dates[0], last = occ.dates[occ.dates.length - 1];
+      var cands = EVENT_OCCS.filter(function (o) {
+        return o.fam === ev.fam && o.id !== ev.id && o.wStart >= first && o.wEnd <= last && o.wEnd < ev.wStart;
+      }).sort(function (a, b) { return b.start.localeCompare(a.start); });
+      if (!cands.length) return null;
+      if (ev.type === 'holiday') {
+        var len = isoDiff(ev.wStart, ev.wEnd);
+        var same = cands.find(function (o) { return isoDiff(o.wStart, o.wEnd) === len; });
+        if (same) return same;
+      }
+      return cands[0];
+    }
+
+    function unitFor(tm, t, ci) {
+      var fc = state.fc;
+      var u = tm.units[t * 2 + ci];
+      if (u > 0) return { unit: u, src: 'adat' };
+      return { unit: ci === 0 ? fc.unitC1 : fc.unitC2, src: 'alap' };
+    }
+
+    function eventUplift(occ, base, an) {
+      var mask = eventMaskFor(occ);
+      var idx = dateIdxOf(occ);
+      var evS = 0, bS = 0, n = 0;
+      isoRange(an.wStart, an.wEnd).forEach(function (d) {
+        var i = idx.get(d);
+        if (i === undefined) return;
+        var s = 0, c = 0;
+        [-21, -14, -7, 7, 14, 21].forEach(function (k) {
+          var j = idx.get(isoAdd(d, k));
+          if (j !== undefined && !mask[j]) { s += base.dayBk[j]; c++; }
+        });
+        if (!c) return;
+        evS += base.dayBk[i];
+        bS += s / c;
+        n++;
+      });
+      if (!n || bS <= 0) return null;
+      return (evS / bS - 1) * 100;
+    }
+
+    function forecastEvent(ev, occ, tm, base) {
+      var fc = state.fc;
+      var an = analogFor(ev, occ);
+      if (!an) return { ev: ev, analog: null, rows: [], uplift: null };
+      var fDays = isoRange(ev.wStart, ev.wEnd);
+      var aDays = isoRange(an.wStart, an.wEnd);
+      var nF = fDays.length, nA = aDays.length;
+      var map = fDays.map(function (_, i) { return nF === 1 ? 0 : Math.round(i * (nA - 1) / (nF - 1)); });
+      var agg = aggDates(occ, idxListFor(occ, an.wStart, an.wEnd), tm);
+      // Szezonális normál: a tavalyi esemény körüli hetek (±1–3 hét) azonos napjai, eseménynapok nélkül
+      // (előtte és utána külön; a kettő közül a magasabb szint – szezonhatáron ez a konzervatív)
+      var mask = eventMaskFor(occ), idxM = dateIdxOf(occ), seen = new Set(), around = [], side = [];
+      aDays.forEach(function (d) {
+        [-21, -14, -7, 7, 14, 21].forEach(function (k) {
+          var j = idxM.get(isoAdd(d, k));
+          if (j !== undefined && !mask[j] && !seen.has(j)) { seen.add(j); around.push(j); side.push(k < 0 ? 0 : 1); }
+        });
+      });
+      var aggN = aggDates(occ, around, tm);
+      var target = fc.target / 100;
+      var rows = [];
+      agg.forEach(function (a, t) {
+        var tr = fc.useTrend ? base.trend[t] : 1;
+        var an2 = aggN.get(t);
+        for (var ci = 0; ci < 2; ci++) {
+          var oc = ci * 2;
+          var u = unitFor(tm, t, ci);
+          var capNorm = 0;
+          if (an2) {
+            var cvB = [], cvA = [];
+            for (var q = 0; q < around.length; q++) { var cc = an2[q * 4 + oc]; if (cc > 0) (side[q] ? cvA : cvB).push(cc); }
+            var mB = cvB.length >= 3 ? median(cvB) : 0, mA = cvA.length >= 3 ? median(cvA) : 0;
+            capNorm = Math.max(mB, mA);
+          }
+          var normSrc = 'szezon';
+          if (!(capNorm > 0)) { capNorm = base.capNow[t * 2 + ci]; normSrc = 'utolsó 8 hét'; }
+          var daysRun = 0, daysOverLY = 0, soldOut = 0;
+          var peakOcc = 0, peakDay = '', peakBk = 0, needPeak = 0, capLYAtNeed = 0;
+          var maxExtraNorm = 0, maxExtraLY = 0, overDemand = 0;
+          var extraDays = [];
+          for (var i = 0; i < nF; i++) {
+            var o = map[i] * 4 + oc;
+            var capA = a[o], bk = a[o + 1];
+            if (capA <= 0) continue;
+            daysRun++;
+            if (bk >= capA) soldOut++;
+            var bkF = bk * tr;
+            var need = bkF / target;
+            var occLY = bkF / capA;
+            if (occLY >= target) daysOverLY++;
+            if (occLY > peakOcc) { peakOcc = occLY; peakDay = fDays[i]; peakBk = bkF; }
+            if (need > needPeak) { needPeak = need; capLYAtNeed = capA; }
+            var cN = capNorm > 0 ? capNorm : capA;
+            var exN = Math.ceil((need - cN) / u.unit - 1e-9);
+            var exL = Math.ceil((need - capA) / u.unit - 1e-9);
+            if (exN > 0) { extraDays.push(fDays[i]); if (exN > maxExtraNorm) maxExtraNorm = exN; }
+            if (exL > maxExtraLY) maxExtraLY = exL;
+            if (bkF > capA) overDemand += bkF - capA;
+          }
+          if (!daysRun) continue;
+          rows.push({
+            t: t, ci: ci, daysRun: daysRun, daysOverLY: daysOverLY, soldOut: soldOut,
+            peakOcc: peakOcc * 100, peakDay: peakDay, peakBk: peakBk, needPeak: needPeak,
+            capNorm: capNorm > 0 ? capNorm : capLYAtNeed, capNormFromLY: !(capNorm > 0), normSrc: normSrc, capLY: capLYAtNeed,
+            maxExtraNorm: maxExtraNorm, maxExtraLY: maxExtraLY, extraDays: extraDays,
+            unit: u.unit, unitSrc: u.src, trend: tr, overDemand: overDemand
+          });
+        }
+      });
+      rows.sort(function (x, y) {
+        return (y.maxExtraLY - x.maxExtraLY) || (y.daysOverLY - x.daysOverLY) || (y.maxExtraNorm - x.maxExtraNorm) || (y.peakOcc - x.peakOcc);
+      });
+      return { ev: ev, analog: an, rows: rows, uplift: eventUplift(occ, base, an) };
+    }
+
+    function normalWeek(occ, tm, base) {
+      var fc = state.fc;
+      var target = fc.target / 100;
+      var mask = eventMaskFor(occ);
+      var out = [];
+      base.recentAgg.forEach(function (a, t) {
+        for (var ci = 0; ci < 2; ci++) {
+          var oc = ci * 2;
+          var u = unitFor(tm, t, ci);
+          var plus = [], minus = [], worst = 0, soldOut = 0, capAll = [];
+          for (var w = 0; w < 7; w++) {
+            var ex = [], occs = [], caps = [], minusOk = true, nDays = 0, nOver = 0;
+            for (var p = 0; p < base.recent.length; p++) {
+              var d = base.recent[p];
+              if (d < 0 || mask[d] || occ.dateWd[d] !== w) continue;
+              var cap = a[p * 4 + oc], bk = a[p * 4 + oc + 1];
+              if (cap <= 0) continue;
+              nDays++;
+              caps.push(cap);
+              occs.push(bk / cap);
+              if (bk >= cap) soldOut++;
+              if (bk / cap >= target) nOver++;
+              ex.push(Math.ceil((bk / target - cap) / u.unit - 1e-9));
+              if (!(cap >= 2 * u.unit && bk <= target * (cap - u.unit))) minusOk = false;
+            }
+            if (nDays < 3) continue;
+            capAll.push(median(caps));
+            var o85 = quantile(occs, 0.85);
+            if (o85 > worst) worst = o85;
+            var k = Math.ceil(quantile(ex, 0.85) - 1e-9);
+            if (k > 0) plus.push({ w: w, k: k, over: nOver, n: nDays });
+            else if (minusOk) minus.push({ w: w, n: nDays });
+          }
+          if (!plus.length && !minus.length) continue;
+          out.push({
+            t: t, ci: ci, plus: plus, minus: minus, worst: worst * 100, soldOut: soldOut,
+            cap: median(capAll), unit: u.unit, unitSrc: u.src,
+            maxPlus: plus.reduce(function (m, x) { return Math.max(m, x.k); }, 0)
+          });
+        }
+      });
+      out.sort(function (x, y) { return (y.maxPlus - x.maxPlus) || (y.worst - x.worst); });
+      return out;
+    }
+
+    var fcCache = null;
+    function computeForecast() {
+      var occ = state.occ;
+      var fc = state.fc;
+      var today = todayIso();
+      var sig = [fc.target, fc.unitC1, fc.unitC2, fc.useTrend ? 1 : 0, today].join('|');
+      if (fcCache && fcCache.occ === occ && fcCache.sig === sig) return fcCache.res;
+      if (!occ.dates.length) return { events: [], normal: [], tm: null, base: null };
+      var tm = trainModel(occ);
+      var base = baseModel(occ, tm);
+      var horizon = isoAdd(today, 365);
+      var events = EVENT_OCCS.filter(function (ev) { return ev.end >= today && ev.start <= horizon; })
+        .map(function (ev) { return forecastEvent(ev, occ, tm, base); });
+      var res = { events: events, normal: normalWeek(occ, tm, base), tm: tm, base: base, today: today };
+      fcCache = { occ: occ, sig: sig, res: res };
+      return res;
+    }
+
+    /* ---- Megjelenítés (3. fül) ---- */
+    function fcRowPass(r, tm) {
+      var fc = state.fc;
+      if (fc.cls !== 'both' && ((fc.cls === 'c1') !== (r.ci === 0))) return false;
+      var q = normText(fc.search);
+      if (!q) return true;
+      var tr = tm.trains[r.t];
+      return normText(tr.name + ' ' + tr.num + ' ' + tr.routeStr).indexOf(q) >= 0;
+    }
+
+    function overlapNames(ev) {
+      return EVENT_OCCS.filter(function (o) {
+        return o.id !== ev.id && o.wStart <= ev.wEnd && o.wEnd >= ev.wStart;
+      }).map(function (o) { return o.name; });
+    }
+
+    function renderTab3() {
+      var fc = state.fc;
+      var panel = document.getElementById('tab3');
+      if (!panel) return;
+      document.getElementById('fc-target').value = fc.target;
+      document.getElementById('fc-unit-c1').value = fc.unitC1;
+      document.getElementById('fc-unit-c2').value = fc.unitC2;
+      document.getElementById('fc-trend').checked = !!fc.useTrend;
+      document.getElementById('fc-price-c1').value = fc.priceC1 || '';
+      document.getElementById('fc-price-c2').value = fc.priceC2 || '';
+      document.querySelectorAll('#fc-cls .seg-btn').forEach(function (b) { b.classList.toggle('active', b.dataset.val === fc.cls); });
+
+      var res = computeForecast();
+      var tm = res.tm;
+      var sub = document.getElementById('t3-subtitle');
+      if (!tm) { sub.textContent = 'Nincs betöltött járati adat.'; return; }
+      sub.textContent = 'Adat: ' + state.occ.dates[0].replace(/-/g, '.') + '. – ' + res.base.last.replace(/-/g, '.') + '. • Előrejelzési horizont: ' +
+        res.today.replace(/-/g, '.') + '. + 12 hónap • Átlagos vonatszintű trend (utolsó 12 hét, YoY, közlekedési napra): ' + fmtPct((res.base.netTrend - 1) * 100, 1, true) +
+        ' • ' + fmtInt(tm.trains.length) + ' vonat (busz és vonatpótlás nélkül)';
+
+      // Eseménylista
+      if (!fc.selected || !res.events.some(function (e) { return e.ev.id === fc.selected; })) {
+        var firstRisk = res.events.find(function (e) { return e.rows.some(function (r) { return r.maxExtraLY > 0; }); });
+        fc.selected = firstRisk ? firstRisk.ev.id : (res.events[0] ? res.events[0].ev.id : null);
+      }
+      var evHtml = '<table class="data-table fc-events"><thead><tr><th>Esemény</th><th>Időpont</th><th>Forrás</th><th>Tavalyi minta</th>' +
+        '<th class="num">Hálózati többletforgalom (azonos hétnapokhoz)</th><th class="num">Tavaly kifogyott</th><th class="num">Tavalyinál több kell</th><th class="num">Erősítés a normálhoz képest</th><th></th></tr></thead><tbody>';
+      res.events.forEach(function (e) {
+        var tp = EVENT_TYPES[e.ev.type];
+        var nRisk = e.rows.filter(function (r) { return r.maxExtraLY > 0 && fcRowPass(r, tm); }).length;
+        var nNorm = e.rows.filter(function (r) { return r.maxExtraNorm > 0 && fcRowPass(r, tm); }).length;
+        var nSold = e.rows.filter(function (r) { return r.soldOut > 0 && fcRowPass(r, tm); }).length;
+        evHtml += '<tr class="fc-ev-row' + (e.ev.id === fc.selected ? ' selected' : '') + '" data-fc-ev="' + e.ev.id + '">' +
+          '<td><span class="fc-chip" style="--chip:' + tp.color + '">' + escHtml(tp.label) + '</span> <strong>' + escHtml(e.ev.name) + '</strong></td>' +
+          '<td>' + escHtml(huRange(e.ev.start, e.ev.end)) + '</td>' +
+          '<td>' + (e.ev.src === 'becsült' ? '<span class="fc-badge est">becsült</span>' : '<span class="fc-badge">hivatalos</span>') + '</td>' +
+          '<td>' + (e.analog ? escHtml(huRange(e.analog.start, e.analog.end)) : '<span class="occ-none">nincs előzmény az adatban</span>') + '</td>' +
+          '<td class="num">' + (e.uplift === null ? '—' : '<span class="delta-badge ' + (e.uplift > 2 ? 'pos' : (e.uplift < -2 ? 'neg' : 'neutral')) + '">' + fmtPct(e.uplift, 0, true) + '</span>') + '</td>' +
+          '<td class="num">' + (e.analog ? fmtInt(nSold) : '—') + '</td>' +
+          '<td class="num">' + (e.analog ? (nRisk ? '<strong style="color:#be123c">' + nRisk + '</strong>' : '0') : '—') + '</td>' +
+          '<td class="num">' + (e.analog ? fmtInt(nNorm) : '—') + '</td>' +
+          '<td><button class="btn btn-outline btn-sm" type="button" data-fc-ev="' + e.ev.id + '">Javaslatok →</button></td></tr>';
+      });
+      evHtml += '</tbody></table>';
+      document.getElementById('fc-events').innerHTML = res.events.length ? evHtml : '<div class="empty-state">Nincs esemény a következő 12 hónapban.</div>';
+
+      // Kiválasztott esemény
+      var sel = res.events.find(function (e) { return e.ev.id === fc.selected; });
+      var title = document.getElementById('fc-ev-title');
+      var esub = document.getElementById('fc-ev-sub');
+      var note = document.getElementById('fc-ev-note');
+      var tbl = document.getElementById('fc-ev-table');
+      if (!sel) {
+        title.textContent = 'Eseményjavaslatok'; esub.textContent = ''; note.innerHTML = ''; tbl.innerHTML = '';
+      } else {
+        title.textContent = sel.ev.name + ' – ' + huRange(sel.ev.start, sel.ev.end);
+        esub.textContent = sel.analog
+          ? ('Előrejelzés: a ' + huRange(sel.analog.start, sel.analog.end) + ' közötti tényleges foglalás' + (fc.useTrend ? ' × vonatonkénti trend' : '') +
+             ' • „Tavalyi összeállítással”: ha ugyanúgy közlekedik, mint tavaly • „Normál”: a tavalyi esemény előtti/utáni hetek azonos napjainak medián férőhelye (szezonális) • elemzett ablak: ' + huDay(sel.ev.wStart) + ' – ' + huDay(sel.ev.wEnd) + ' (utazási napokkal)')
+          : 'Ehhez az eseményhez nincs korábbi előfordulás a betöltött adatban.';
+        var notes = [];
+        if (sel.ev.src === 'becsült') notes.push('<strong>Becsült időpont.</strong> ' + escHtml(sel.ev.note || 'A rendező még nem hirdette ki.'));
+        else if (sel.ev.note) notes.push('<strong>Figyelem:</strong> ' + escHtml(sel.ev.note));
+        var ov = overlapNames(sel.ev);
+        if (ov.length) notes.push('Átfedő esemény(ek): ' + escHtml(ov.join(', ')) + ' – a tavalyi mintában ezek hatása együtt jelenik meg.');
+        if (sel.analog && isoWd(sel.analog.start) !== isoWd(sel.ev.start)) {
+          notes.push('A tavalyi esemény más napon kezdődött (' + WEEKDAYS_FULL[isoWd(sel.analog.start)] + ' → ' + WEEKDAYS_FULL[isoWd(sel.ev.start)] + '); a napok az esemény kezdetéhez igazítva vannak párosítva, a hétvégi hatás eltolódhat.');
+        }
+        note.innerHTML = notes.length ? '<div class="radar-summary cool">' + notes.join('<br>') + '</div>' : '';
+
+        var rows = sel.rows.filter(function (r) { return fcRowPass(r, tm) && (r.maxExtraLY > 0 || r.maxExtraNorm > 0 || r.peakOcc >= fc.target); });
+        var hasPrice = (fc.priceC1 > 0) || (fc.priceC2 > 0);
+        if (!sel.analog) {
+          tbl.innerHTML = '';
+        } else if (!rows.length) {
+          tbl.innerHTML = '<div class="empty-state"><strong>Nincs bővítési igény</strong><span>A tavalyi minta és a trend alapján egy vonat sem lépi át a ' + fc.target + '%-os célt.</span></div>';
+        } else {
+          var h = '<table class="data-table"><thead><tr><th>Vonat</th><th>Reláció</th><th>Osztály</th>' +
+            '<th class="num">Várható csúcs tavalyi összeállítással</th><th class="num">Napok ≥ ' + fc.target + '%</th>' +
+            '<th class="num">Szükséges férőhely (csúcs)</th><th class="num">Tavaly / normál</th><th class="num">Egység</th><th>Javaslat</th><th>Erősítendő napok (normálhoz)</th>' +
+            (hasPrice ? '<th class="num">Kapacitáson felüli kereslet</th>' : '') + '<th>Megjegyzés</th></tr></thead><tbody>';
+          rows.slice(0, 60).forEach(function (r) {
+            var tr = tm.trains[r.t];
+            var price = r.ci === 0 ? fc.priceC1 : fc.priceC2;
+            var notesR = [];
+            if (r.soldOut) notesR.push(r.soldOut + ' napja kifogyott tavaly → a valódi kereslet nagyobb lehet');
+            if (r.capNormFromLY) notesR.push('normál összeállítás nem ismert: a tavalyi az alap');
+            else if (r.normSrc !== 'szezon') notesR.push('normál = utolsó 8 hét');
+            if (Math.abs(r.trend - 1) >= 0.05) notesR.push('trend ' + fmtPct((r.trend - 1) * 100, 0, true));
+            var rec;
+            if (r.maxExtraLY > 0) rec = '<span class="fc-rec plus">+' + r.maxExtraNorm + ' egység</span><br><span class="fc-small">tavalyinál +' + r.maxExtraLY + '</span>';
+            else if (r.maxExtraNorm > 0) rec = '<span class="fc-rec watch">+' + r.maxExtraNorm + ' egység</span><br><span class="fc-small">mint tavaly</span>';
+            else rec = '<span class="fc-rec watch">figyelendő</span>';
+            h += '<tr>' +
+              '<td><strong>' + escHtml(tr.name) + '</strong> ' + escHtml(tr.num) + '</td>' +
+              '<td style="color:var(--text-secondary)">' + escHtml(tr.routeStr) + '</td>' +
+              '<td>' + (r.ci === 0 ? '1. o.' : '2. o.') + '</td>' +
+              '<td class="num">' + fmtOccPill(r.peakOcc) + '<br><span class="fc-small">' + (r.peakDay ? huDay(r.peakDay) + ' (' + WEEKDAYS_SHORT[isoWd(r.peakDay)] + ')' : '') + ' • ' + fmtInt(r.peakBk) + ' fő</span></td>' +
+              '<td class="num">' + r.daysOverLY + ' / ' + r.daysRun + '</td>' +
+              '<td class="num"><strong>' + fmtInt(r.needPeak) + '</strong></td>' +
+              '<td class="num">' + fmtInt(r.capLY) + ' / ' + fmtInt(r.capNorm) + '</td>' +
+              '<td class="num">' + fmtInt(r.unit) + (r.unitSrc === 'adat' ? '' : '<span class="fc-small"> (alap)</span>') + '</td>' +
+              '<td>' + rec + '</td>' +
+              '<td>' + escHtml(compactDates(r.extraDays)) + '</td>' +
+              (hasPrice ? '<td class="num">' + (r.overDemand > 0 ? fmtInt(r.overDemand) + ' fő' + (price > 0 ? '<br><span class="fc-small">≈ ' + fmtInt(r.overDemand * price) + ' Ft</span>' : '') : '—') + '</td>' : '') +
+              '<td class="fc-small">' + escHtml(notesR.join('; ')) + '</td></tr>';
+          });
+          h += '</tbody></table>';
+          if (rows.length > 60) h += '<div class="pagination-bar"><span>Az első 60 sor látható (' + rows.length + ' összesen). Szűkíts a keresővel vagy osztályra.</span></div>';
+          tbl.innerHTML = h;
+        }
+      }
+
+      // Normál hét
+      var nRows = res.normal.filter(function (r) { return fcRowPass(r, tm); });
+      document.getElementById('fc-normal-sub').textContent = 'Az utolsó 8 hét (' + huDay(isoAdd(res.base.last, -55)) + ' – ' + huDay(res.base.last) +
+        ') ünnep-, szünet- és fesztiválnapok nélkül • hétnaponként, az adott nap tényleges összeállításához mérve • „+k”: az esetek 15%-ában ennyi egység kellett volna a ' + fc.target +
+        '%-os célhoz • „−1”: minden ilyen napon egy egységgel kevesebb is elég lett volna • szezonális, havonta érdemes újrafuttatni';
+      var nt = document.getElementById('fc-normal-table');
+      if (!nRows.length) {
+        nt.innerHTML = '<div class="empty-state"><strong>Nincs javasolt változtatás</strong></div>';
+      } else {
+        var nh = '<table class="data-table"><thead><tr><th>Vonat</th><th>Reláció</th><th>Osztály</th><th class="num">Jelenlegi férőhely</th><th class="num">Egység</th>' +
+          '<th>Bővítés (hétnap: egység)</th><th>Leépíthető (hétnap)</th><th class="num">Legmagasabb p85 kihasználtság</th><th class="num">Kifogyott napok</th></tr></thead><tbody>';
+        nRows.slice(0, 80).forEach(function (r) {
+          var tr = tm.trains[r.t];
+          nh += '<tr><td><strong>' + escHtml(tr.name) + '</strong> ' + escHtml(tr.num) + '</td>' +
+            '<td style="color:var(--text-secondary)">' + escHtml(tr.routeStr) + '</td>' +
+            '<td>' + (r.ci === 0 ? '1. o.' : '2. o.') + '</td>' +
+            '<td class="num">' + fmtInt(r.cap) + '</td>' +
+            '<td class="num">' + fmtInt(r.unit) + (r.unitSrc === 'adat' ? '' : '<span class="fc-small"> (alap)</span>') + '</td>' +
+            '<td>' + (r.plus.length ? r.plus.map(function (x) { return '<span class="fc-rec plus" title="' + x.over + ' / ' + x.n + ' napon volt a cél fölött">' + WEEKDAYS_SHORT[x.w] + ': +' + x.k + '</span>'; }).join(' ') : '—') + '</td>' +
+            '<td>' + (r.minus.length ? r.minus.map(function (x) { return '<span class="fc-rec minus">' + WEEKDAYS_SHORT[x.w] + ': −1</span>'; }).join(' ') : '—') + '</td>' +
+            '<td class="num">' + fmtOccPill(r.worst) + '</td>' +
+            '<td class="num">' + (r.soldOut ? '<strong style="color:#be123c">' + r.soldOut + '</strong>' : '0') + '</td></tr>';
+        });
+        nh += '</tbody></table>';
+        if (nRows.length > 80) nh += '<div class="pagination-bar"><span>Az első 80 sor látható (' + nRows.length + ' összesen). Szűkíts a keresővel.</span></div>';
+        nt.innerHTML = nh;
+      }
+    }
+
+    /* ---- Km-tábla (opcionális) ---- */
+    function normStation(s) { return normText(cleanStation(s)); }
+
+    function parseKmCsv(text) {
+      var delim = detectDelimiter(text);
+      var parsed = parseCsvRows(text, delim);
+      if (parsed.length < 2) throw new Error('A km-tábla túl kevés sort tartalmaz.');
+      var headers = parsed[0].map(normText);
+      var find = function (pred) { return headers.findIndex(pred); };
+      var colNum = find(function (h) { return h.indexOf('vonatszam') >= 0 || h.indexOf('belfoldi') >= 0 || h === 'szam'; });
+      var colS = find(function (h) { return h.indexOf('indulo') >= 0; });
+      var colE = find(function (h) { return h.indexOf('cel') >= 0 && h.indexOf('km') < 0; });
+      var colKm = find(function (h) { return h === 'km' || h.indexOf('km') >= 0 || h.indexOf('tavolsag') >= 0; });
+      if (colKm < 0) throw new Error('Nem találok „km” oszlopot a fájlban.');
+      if (colNum < 0 && (colS < 0 || colE < 0)) throw new Error('Kell egy „vonatszám” oszlop, vagy „induló” + „cél” oszlop.');
+      var byNum = {}, byPair = {}, n = 0;
+      for (var r = 1; r < parsed.length; r++) {
+        var c = parsed[r];
+        var km = parseFloat(String(c[colKm] || '').replace(/\s+/g, '').replace(',', '.'));
+        if (!(km > 0)) continue;
+        if (colNum >= 0 && c[colNum] && c[colNum].trim()) { byNum[c[colNum].trim()] = km; n++; }
+        else if (colS >= 0 && colE >= 0 && c[colS] && c[colE]) { byPair[normStation(c[colS]) + '|' + normStation(c[colE])] = km; n++; }
+      }
+      if (!n) throw new Error('Nem találtam érvényes km-értéket.');
+      return { byNum: byNum, byPair: byPair, count: n };
+    }
+
+    function routeKmOf(occ) {
+      if (!state.km) return null;
+      if (occ._routeKm && occ._routeKmSrc === state.km) return occ._routeKm;
+      var km = state.km;
+      var arr = new Float64Array(occ.routes.length);
+      for (var r = 0; r < occ.routes.length; r++) {
+        var rt = occ.routes[r];
+        var s = normStation(rt[3]), e = normStation(rt[4]);
+        arr[r] = km.byNum[rt[0]] || km.byPair[s + '|' + e] || km.byPair[e + '|' + s] || 0;
+      }
+      occ._routeKm = arr;
+      occ._routeKmSrc = km;
+      return arr;
+    }
+
+    /* =========================================================================
        TELJES FRISSÍTÉS ÉS ESEMÉNYKEZELŐK
        ========================================================================= */
     function updateMetaAndHeader() {
@@ -5518,6 +6443,7 @@
       renderTab1Content();
       renderTab2Controls();
       renderTab2Content();
+      if (state.activeTab === 'tab3') renderTab3();
     }
 
     function toggleSet(set, val) {
@@ -5566,7 +6492,15 @@
           await new Promise(function (r) { window.setTimeout(r, 20); });
           var dec = decodeHungarianCsv(buf);
 
-          if (kind === 'occ') {
+          if (kind === 'km') {
+            var resK = parseKmCsv(dec.text);
+            state.km = resK;
+            state.isDemo = false;
+            dz.classList.add('loaded');
+            statusEl.style.color = 'var(--emerald)';
+            statusEl.textContent = '✓ Betöltve: ' + fmtInt(resK.count) + ' km-érték (' + dec.encoding + ')';
+            showToast('Km-tábla betöltve (' + resK.count + ' sor)', 'success');
+          } else if (kind === 'occ') {
             var res = parseOccupancyCsv(dec.text);
             state.occ = prepareOccModel(res.raw);
             state.isDemo = false;
@@ -5643,6 +6577,7 @@
             p.classList.toggle('active', p.id === target);
           });
           if (target === 'tab1') renderTab1Content();
+          else if (target === 'tab3') renderTab3();
           else { renderTab2Controls(); renderTab2Content(); }
         });
       });
@@ -5686,6 +6621,7 @@
 
       setupDropzone('dz-occ', 'input-occ', 'status-occ', 'error-occ', 'occ');
       setupDropzone('dz-pass', 'input-pass', 'status-pass', 'error-pass', 'pass');
+      setupDropzone('dz-km', 'input-km', 'status-km', 'error-km', 'km');
 
       // Tab 1 keresők
       document.getElementById('t1-search-name').addEventListener('input', function (e) {
@@ -5935,6 +6871,54 @@
         renderTab2Controls(); renderTab2Content();
       });
 
+      // Vonatpótlás-szűrő, heti profil kizárás
+      document.getElementById('t1-excl-repl').addEventListener('change', function (e) {
+        state.t1.excludeRepl = !!e.target.checked;
+        state.t1.page = 1;
+        renderTab1Content();
+      });
+      document.getElementById('t1-wd-excl').addEventListener('change', function (e) {
+        state.t1.wdExclEvents = !!e.target.checked;
+        renderTab1Content();
+      });
+
+      // Előrejelzés fül
+      var fcNum = function (id, key, lo, hi) {
+        document.getElementById(id).addEventListener('change', function (e) {
+          var v = parseFloat(e.target.value);
+          if (!Number.isFinite(v)) v = (key === 'priceC1' || key === 'priceC2') ? 0 : state.fc[key];
+          state.fc[key] = Math.max(lo, Math.min(hi, v));
+          renderTab3();
+        });
+      };
+      fcNum('fc-target', 'target', 50, 100);
+      fcNum('fc-unit-c1', 'unitC1', 10, 400);
+      fcNum('fc-unit-c2', 'unitC2', 10, 400);
+      fcNum('fc-price-c1', 'priceC1', 0, 100000);
+      fcNum('fc-price-c2', 'priceC2', 0, 100000);
+      document.getElementById('fc-trend').addEventListener('change', function (e) {
+        state.fc.useTrend = !!e.target.checked;
+        renderTab3();
+      });
+      document.getElementById('fc-search').addEventListener('input', function (e) {
+        state.fc.search = e.target.value;
+        renderTab3();
+      });
+      document.getElementById('fc-cls').addEventListener('click', function (e) {
+        var b = e.target.closest('.seg-btn');
+        if (!b) return;
+        state.fc.cls = b.dataset.val;
+        renderTab3();
+      });
+      document.getElementById('fc-events').addEventListener('click', function (e) {
+        var row = e.target.closest('[data-fc-ev]');
+        if (!row) return;
+        state.fc.selected = row.dataset.fcEv;
+        renderTab3();
+        var tgt = document.getElementById('fc-ev-title');
+        if (e.target.tagName === 'BUTTON' && tgt.scrollIntoView) tgt.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+
       // Export (PowerPoint / PNG)
       var exModal = document.getElementById('export-modal');
       document.getElementById('btn-open-export').addEventListener('click', function () {
@@ -5966,7 +6950,7 @@
         window.clearTimeout(rTimer);
         rTimer = window.setTimeout(function () {
           if (state.activeTab === 'tab1') renderTab1Content();
-          else renderTab2Content();
+          else if (state.activeTab === 'tab2') renderTab2Content();
         }, 120);
       });
     }
@@ -5987,6 +6971,8 @@
             var payload = await decompressPayload(parsed);
             state.occ = prepareOccModel(payload.occ);
             state.pass = preparePassModel(payload.pass);
+            if (payload.km && payload.km.byNum) state.km = payload.km;
+            if (payload.settings && payload.settings.fc) Object.assign(state.fc, payload.settings.fc);
             state.readonly = !!parsed.readonly || state.readonly;
             if (state.readonly) document.body.setAttribute('data-readonly', 'true');
             state.isDemo = !!parsed.isDemo;
