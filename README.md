@@ -12,4 +12,13 @@
 3. **💾 Küldhető HTML mentése** → a letöltött fájlt nevezd át `havi-riport.html`-re.
 4. GitHub: Add file → Upload files → húzd be → Commit changes. A Pages 1–2 percen belül frissül.
 
+Opcionálisan egy 3. fájl is betölthető: **viszonylati km-tábla** (`vonatszám;km` vagy `induló;cél;km`) – ezzel km-súlyozott kihasználtság és utaskm jelenik meg. A 3. fül beállításai (cél-kihasználtság, alap egységméret, helyjegyár) a mentett riportba is bekerülnek.
+
 A szerkesztőben nincs adat; a CSV-k csak a böngészőben dolgozódnak fel. Az **⬇ Export** gombbal (élő riportban is) PowerPoint (.pptx) vagy PNG készíthető az aktuális szűrésről.
+
+## Előrejelzés és kocsiszám-javaslat (3. fül)
+
+- **Eseménynaptár** (`EVENT_CALENDAR` a riport kódjában): iskolai szünetek (tanév rendje rendeletek), ünnepek és munkanap-áthelyezések (NGM-rendeletek), fesztiválok (rendezői közlemények). „becsült” = még nem kihirdetett időpont – évente érdemes frissíteni.
+- **Eseményelőrejelzés:** a legutóbbi azonos esemény tényleges vonatonkénti foglalása × csillapított trend (utolsó 12 hét YoY fele, max ±10%), összevetve a tavalyi tényleges és a szezonális normál összeállítással.
+- **Egység:** vonatonként a kapacitás lépcsőiből (2. o. 55–90, 1. o. 40–70 hely), különben az alapérték.
+- **Normál hét:** az utolsó 8 hét, eseménynapok nélkül, hétnaponként; bővítés és leépíthető egység.
