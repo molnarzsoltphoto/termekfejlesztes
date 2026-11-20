@@ -26,3 +26,12 @@ A szerkesztőben nincs adat; a CSV-k csak a böngészőben dolgozódnak fel. Az 
 - **Eseményelőrejelzés:** a legutóbbi azonos esemény tényleges vonatonkénti foglalása × csillapított trend (utolsó 12 hét YoY fele, max ±10%), összevetve a tavalyi tényleges és a szezonális normál összeállítással.
 - **Egység:** vonatonként a kapacitás lépcsőiből (2. o. 55–90, 1. o. 40–70 hely), különben az alapérték.
 - **Normál hét:** az utolsó 8 hét, eseménynapok nélkül, hétnaponként; bővítés és leépíthető egység.
+
+## Kínálatfejlesztési jelzések (4. fül)
+
+Időszak (utolsó 12 hónap vagy naptári év) és évszak szerint szűrhető; páros/páratlan vonatszám, rendezés vonatnév + indulás vagy érintettség szerint.
+
+- **Bisztró-penetráció:** bisztrótranzakció / 100 foglalt utas vonatonként (2026-tól, a bisztró-xlsx alapján). „Sok utas, kevés vásárlás”: a vonatnév mediánjánál ≥25%-kal kisebb penetráció legalább medián utasszám mellett.
+- **Osztályok közti eltolódás:** napok, amikor a 2. o. ≥90% és az 1. o. ≤50% (állítható). Javaslat: deklasszálás (≥30% napon és ≥30 üres 1. o. hely) vagy upgrade-akció.
+- **Kerékpár-radar:** megtelt kerékpárhelyek vonatonként, havi eloszlással; szezonális / állandó / csúcsidőszaki bővítési javaslat.
+- **Busz–vonat:** helyjegyes helyközi buszok és helyjegyköteles vonatok azonos végpontú viszonylatokon (település szerint). Közbenső megállók nincsenek az adatban. A buszadat 2024. augusztus elejétől teljes.
