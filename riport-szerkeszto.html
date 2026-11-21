@@ -2098,6 +2098,7 @@
   </div>
   <!-- BEÁGYAZOTT ADATOK HELYE (JSON / GZIP-BASE64) -->
   <script type="application/json" id="embedded-data">{}</script>
+  <script type="application/json" id="riport-summary">{}</script>
 
   <!-- PowerPoint-export: PptxGenJS 3.12.0 + JSZip (MIT licenc, https://github.com/gitbrent/PptxGenJS) – beágyazva, offline -->
   <script data-lib="pptxgenjs">
@@ -2948,6 +2949,10 @@
           if (el) el.innerHTML = '';
         });
 
+        ['fc-events', 'fc-ev-table', 'fc-normal-table', 't4-bz-body', 't4-cls-body', 't4-bike-body', 't4-bus-body'].forEach(function (id) {
+          var el = clone.querySelector('#' + id);
+          if (el) el.innerHTML = '';
+        });
         var modal = clone.querySelector('#upload-modal');
         if (modal) modal.classList.add('hidden');
         var exm = clone.querySelector('#export-modal');
@@ -2961,6 +2966,15 @@
         var emb = clone.querySelector('#embedded-data');
         if (emb) {
           emb.textContent = JSON.stringify(wrapper).replace(/</g, '\\u003c');
+          // Havi összesítő más alkalmazásoknak (Abigél): külön, tömörítetlen blokk
+          var sumEl = clone.querySelector('#riport-summary');
+          if (!sumEl) {
+            sumEl = document.createElement('script');
+            sumEl.type = 'application/json';
+            sumEl.id = 'riport-summary';
+            emb.parentNode.insertBefore(sumEl, emb.nextSibling);
+          }
+          try { sumEl.textContent = JSON.stringify(buildRiportSummary() || {}).replace(/</g, '\\u003c'); } catch (e) { sumEl.textContent = '{}'; }
         }
 
         var htmlStr = '<!DOCTYPE html>\n' + clone.outerHTML;
@@ -7776,6 +7790,72 @@
         clearTimeout(tmr);
         tmr = setTimeout(function () { t4.search = e.target.value; renderTab4(); }, 250);
       });
+    }
+    /* =========================================================================
+       HAVI ÖSSZESÍTŐ MÁS ALKALMAZÁSOKNAK (pl. Abigél üzleti eset)
+       A mentett HTML-be kerül, külön JSON-blokkban (riport-summary azonosítóval)
+       sor: [év*100+hó, mutató index, dimenzió index, érték]
+       ========================================================================= */
+    function buildRiportSummary() {
+      var occ = state.occ;
+      if (!occ || !occ.rowCount) return null;
+      var info = t4RouteInfo(occ);
+      var bz = biszRowOf(occ);
+      var R = occ.rowsFlat;
+      var M4 = ['Foglalt ülőhely (fő)', 'Ülőhely-kapacitás (fő)', 'Közlekedett vonat (db)', 'Kerékpár-foglalás (db)'];
+      var secs = {
+        vnev: { label: 'Vonatok – vonatnév szerint', metrics: M4.concat(['Bisztró-tranzakció (db)']) },
+        vnem: { label: 'Vonatok és helyjegyes buszok – vonatnem szerint', metrics: M4.slice() },
+        busz: { label: 'Helyjegyes buszok – viszonylat szerint', metrics: ['Foglalt hely (fő)', 'Kapacitás (fő)', 'Közlekedett járat (db)'] },
+        nap: { label: 'Turisztikai napijegyek', metrics: ['Eladott napijegy (db)', 'eTicket (db)', 'Személyes (db)'] }
+      };
+      Object.keys(secs).forEach(function (k) { secs[k].dims = []; secs[k]._di = new Map(); secs[k]._v = new Map(); });
+      var add = function (sec, ym, mi, dim, v) {
+        if (!v) return;
+        var s = secs[sec];
+        var di = s._di.get(dim);
+        if (di === undefined) { di = s.dims.length; s.dims.push(dim); s._di.set(dim, di); }
+        var key = ym + '|' + mi + '|' + di;
+        s._v.set(key, (s._v.get(key) || 0) + v);
+      };
+      for (var i = 0; i < occ.rowCount; i++) {
+        var off = i * STRIDE, r = R[off + 1], kind = info.kind[r];
+        if (!kind) continue;
+        var d = R[off], ym = occ.dateYear[d] * 100 + occ.dateMonth[d];
+        var rt = occ.routes[r];
+        var bk = R[off + 3] + R[off + 5] + R[off + 13], cap = R[off + 2] + R[off + 4] + R[off + 12], bike = R[off + 7];
+        add('vnem', ym, 0, rt[2], bk); add('vnem', ym, 1, rt[2], cap); add('vnem', ym, 2, rt[2], 1); add('vnem', ym, 3, rt[2], bike);
+        if (kind === 1) {
+          var nm = rt[1] || '(Név nélküli)';
+          add('vnev', ym, 0, nm, bk); add('vnev', ym, 1, nm, cap); add('vnev', ym, 2, nm, 1); add('vnev', ym, 3, nm, bike);
+          if (bz && bz.tr[i] > 0) add('vnev', ym, 4, nm, bz.tr[i]);
+        } else if (info.pair[r]) {
+          add('busz', ym, 0, info.pair[r], bk); add('busz', ym, 1, info.pair[r], cap); add('busz', ym, 2, info.pair[r], 1);
+        }
+      }
+      var passLast = 0;
+      (state.pass || []).forEach(function (p) {
+        var ym = parseInt(p.date.slice(0, 4), 10) * 100 + parseInt(p.date.slice(5, 7), 10);
+        passLast = Math.max(passLast, ym);
+        [['Balaton24', p.balOssz, p.balEt, p.balSzem], ['Bakony', p.bakOssz, p.bakEt, p.bakSzem], ['Mecsek', p.mecOssz, p.mecEt, p.mecSzem]].forEach(function (x) {
+          add('nap', ym, 0, x[0], x[1]); add('nap', ym, 1, x[0], x[2]); add('nap', ym, 2, x[0], x[3]);
+        });
+      });
+      var last = occ.dates[occ.dates.length - 1];
+      var lastYm = parseInt(last.slice(0, 4), 10) * 100 + parseInt(last.slice(5, 7), 10);
+      var complete = isoAdd(last, 1).slice(8, 10) === '01' ? lastYm : (lastYm % 100 === 1 ? lastYm - 89 : lastYm - 1);
+      var out = { v: 1, source: 'TEKNO havi riport', generated: todayIso(), from: occ.dates[0].slice(0, 7), to: last.slice(0, 7), secs: {} };
+      Object.keys(secs).forEach(function (k) {
+        var s = secs[k];
+        var rows = [];
+        s._v.forEach(function (v, key) {
+          var p = key.split('|');
+          rows.push([+p[0], +p[1], +p[2], Math.round(v)]);
+        });
+        rows.sort(function (a, b) { return a[0] - b[0] || a[1] - b[1] || a[2] - b[2]; });
+        out.secs[k] = { label: s.label, metrics: s.metrics, dims: s.dims, lastComplete: k === 'nap' ? passLast : complete, rows: rows };
+      });
+      return out;
     }
     /* =========================================================================
        TELJES FRISSÍTÉS ÉS ESEMÉNYKEZELŐK

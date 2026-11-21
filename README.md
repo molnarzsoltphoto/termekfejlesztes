@@ -35,3 +35,7 @@ Időszak (utolsó 12 hónap vagy naptári év) és évszak szerint szűrhető; p
 - **Osztályok közti eltolódás:** napok, amikor a 2. o. ≥90% és az 1. o. ≤50% (állítható). Javaslat: deklasszálás (≥30% napon és ≥30 üres 1. o. hely) vagy upgrade-akció.
 - **Kerékpár-radar:** megtelt kerékpárhelyek vonatonként, havi eloszlással; szezonális / állandó / csúcsidőszaki bővítési javaslat.
 - **Busz–vonat:** helyjegyes helyközi buszok és helyjegyköteles vonatok azonos végpontú viszonylatokon (település szerint). Közbenső megállók nincsenek az adatban. A buszadat 2024. augusztus elejétől teljes.
+
+## Havi összesítő más alkalmazásoknak (Abigél)
+
+A szerkesztő mentéskor a `havi-riport.html`-be egy kis, tömörítetlen JSON-blokkot is ír (`id="riport-summary"`): havonta, szekciónként (vonatnév, vonatnem, helyjegyes busz viszonylat, napijegy) foglalás, kapacitás, járatszám, kerékpár és bisztró-tranzakció. Abigél üzleti eset paneljét („Mért utasszám a TEKNO havi riportból”) ez táplálja, így a havi frissítés után ott is automatikusan az új számok látszanak.
