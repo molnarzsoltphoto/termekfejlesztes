@@ -3315,7 +3315,7 @@
         if (!hasNames && !hasNums && groups.length > 5) {
           groups = groups.slice(0, 5);
           banner = 'Nincs konkrét járat kipipálva – a Top 5 legnagyobb forgalmú járat jelenik meg külön, átlagolás nélkül. Pipálj be járatokat bal oldalon a célzott összehasonlításhoz!';
-        } else if (groups.length > 8) {
+        } else if (groups.length > 8 && !EXPORT_FULL) {
           banner = 'A ' + groups.length + ' kijelölt járatból a 8 legnagyobb forgalmú jelenik meg a grafikonon.';
           groups = groups.slice(0, 8);
         }
@@ -3345,7 +3345,7 @@
         if (droppedMinor > 0) {
           banner = (banner ? banner + ' ' : '') + droppedMinor + ' ritka végállomás-variáns (a vonatnév forgalmának < 3%-a) nem jelenik meg külön.';
         }
-        if (groups.length > 10) {
+        if (groups.length > 10 && !EXPORT_FULL) {
           groups = groups.slice(0, 10);
           banner = (banner ? banner + ' ' : '') + 'Legfeljebb 10 irány-csoport jelenik meg (a ritkább végállomás-variánsok kimaradnak).';
         }
@@ -4227,7 +4227,7 @@
           var asc = t1.radarMode === 'bottom';
           rows = rows.filter(function (r) { return r.days >= radar.minDays && Number.isFinite(r.avgPct); })
             .sort(function (a, b) { return asc ? (a.avgPct - b.avgPct) : (b.avgPct - a.avgPct); })
-            .slice(0, 10);
+            .slice(0, EXPORT_FULL ? Infinity : 10);
         }
         col = t1.radarSortCol;
         dir = t1.radarSortDir === 'asc' ? 1 : -1;
@@ -4246,7 +4246,7 @@
           { key: 'avgBooked', label: 'Ø foglalt / nap',     num: true,  render: function (r) { return fmtAvg(r.avgBooked); } },
           { key: 'avgCap',    label: 'Ø kapacitás / nap',   num: true,  render: function (r) { return fmtAvg(r.avgCap); } }
         ];
-        var modeLbl = t1.radarMode === 'over' ? (thr + '% feletti napok') : (t1.radarMode === 'top' ? 'Top 10 legtelítettebb járat' : 'Top 10 legüresebb járat');
+        var modeLbl = t1.radarMode === 'over' ? (thr + '% feletti napok') : (t1.radarMode === 'top' ? (EXPORT_FULL ? 'Legtelítettebb járatok (teljes rangsor)' : 'Top 10 legtelítettebb járat') : (EXPORT_FULL ? 'Legüresebb járatok (teljes rangsor)' : 'Top 10 legüresebb járat'));
         titleEl.textContent = 'Kapacitás-radar – ' + modeLbl + ' (' + rcd.label + ')';
 
         var sHtml = '';
@@ -8455,8 +8455,8 @@
         (agg.unmatched.size ? '<div class="fc-small">Térképre nem illeszthető: ' + Array.from(agg.unmatched.entries()).map(function (x) { return escHtml(x[0]) + ' (' + x[1] + ')'; }).join(', ') + '</div>' : '') +
         '</div></div>';
       // Top 20 viszonylat
-      var top = agg.list.slice(0, 20);
-      h += '<h3 class="t4-h3">A 20 legnépszerűbb kerékpáros viszonylat</h3><div class="table-wrap"><table class="data-table t4-only bo-top"><thead><tr><th class="num">#</th><th>Viszonylat</th><th class="num">Jegy összesen</th><th class="num">Oda (A → B)</th><th class="num">Vissza (B → A)</th><th class="num">Ø km</th><th class="num">Arány</th></tr></thead><tbody>' +
+      var top = agg.list.slice(0, EXPORT_FULL ? Infinity : 20);
+      h += '<h3 class="t4-h3">' + (EXPORT_FULL ? 'Kerékpáros viszonylatok (mind, népszerűség szerint)' : 'A 20 legnépszerűbb kerékpáros viszonylat') + '</h3><div class="table-wrap"><table class="data-table t4-only bo-top"><thead><tr><th class="num">#</th><th>Viszonylat</th><th class="num">Jegy összesen</th><th class="num">Oda (A → B)</th><th class="num">Vissza (B → A)</th><th class="num">Ø km</th><th class="num">Arány</th></tr></thead><tbody>' +
         top.map(function (e, i) {
           return '<tr><td class="num">' + (i + 1) + '</td><td><strong>' + escHtml(e.a) + ' – ' + escHtml(e.b) + '</strong></td><td class="num"><strong>' + fmtInt(e.n) + '</strong></td><td class="num">' + fmtInt(e.ab) + '</td><td class="num">' + fmtInt(e.ba) + '</td><td class="num">' + fmtInt(e.km / e.n) + '</td><td class="num">' + fmtPct(100 * e.n / agg.tot.db, 1) + '</td></tr>';
         }).join('') + '</tbody></table></div><div style="height:16px"></div>';
@@ -8624,7 +8624,7 @@
       h += '<div class="t4-kpis">' + segs.map(function (s) {
         return '<div><span>' + escHtml(PC_SEG[s.s]) + ' • ' + s.n + ' vonat</span><strong>' + (s.avg === null ? '—' : fmtPct(100 * s.avg, 0)) + '</strong><span style="font-weight:500">utassal súlyozva: ' + (s.wavg === null ? '—' : fmtPct(100 * s.wavg, 0)) + '</span></div>';
       }).join('') + '</div>';
-      h += '<h3 class="t4-h3">A 25 legrosszabb menetrendszerűségű vonat' + (rows.length < 25 ? ' (' + rows.length + ')' : '') + '</h3>' +
+      h += '<h3 class="t4-h3">' + (EXPORT_FULL ? 'Minden vonat, a legrosszabb menetrendszerűségűtől' : 'A 25 legrosszabb menetrendszerűségű vonat' + (rows.length < 25 ? ' (' + rows.length + ')' : '')) + '</h3>' +
         '<div class="table-wrap"><table class="data-table t4-pc"><thead><tr><th class="num">#</th><th>Vonat</th><th>Szegmens</th><th class="num">' + escHtml(P.label.replace(/\s*%$/, '')) + '</th><th class="num">Ø utas (VTK)</th><th>Reláció</th><th>Vonatnem</th><th class="num">Közl. nap</th><th class="num">Ø kihaszn. (helyjegy)</th><th class="num">Ø foglalt / vonat</th><th class="num">Kerékpárhely tele (nap)</th><th class="num">Bisztró tr. / 100 utas</th></tr></thead><tbody>';
       worst.forEach(function (x, i) {
         var o = x.o;
@@ -8872,7 +8872,7 @@
       }
       if (key === 't4cls') return block(xTable(q('#t4-cls-body table')));
       if (key === 't4bike') {
-        var tb = xTable(q('#t4-bike-body table'));
+        var tb = xTable(q('#t4-bike-body table.data-table'));
         if (!tb) return null;
         var mi = tb.head.indexOf('Tele napok havonta');
         if (mi >= 0) {
@@ -8887,7 +8887,7 @@
         }
         return block(tb);
       }
-      if (key === 't4bikeod') return block(xTable(q('#t4-bikemap table.bo-top')));
+      if (key === 't4bikeod') { var bo = xTable(q('#t4-bikemap table.bo-top')); return bo ? [{ title: 'Kerékpáros viszonylatok – mind, népszerűség szerint', notes: notes, head: bo.head, rows: bo.rows }] : null; }
       if (key === 't4punct') {
         var pb = [{ title: title, notes: notes }];
         var pt = xTable(q('#t4-pc-body table.t4-pc'));
@@ -8922,7 +8922,8 @@
           var blocks = await xlsxSheetFor(keys[i], cap);
           if (!blocks || !blocks.length) continue;
           var it = EXPORT_ITEMS.find(function (x) { return x.key === keys[i]; });
-          sheets.push({ name: it ? it.label.replace(/\s*\(első \d+ sor\)|\s*\(aktuális oldal első \d+ sora\)/, '') : keys[i], blocks: blocks });
+          var XL_NAME = { t1table: 'Járattáblázat', t4bikeod: 'Kerékpáros viszonylatok', t4punct: 'Menetrendszerűség', t4bikemap: 'Kerékpár-térkép adatai', t3event: 'Esemény – javaslatok', t3normal: 'Normál hét – kocsiszám' };
+          sheets.push({ name: XL_NAME[keys[i]] || (it ? it.label.replace(/\s*\(első \d+ sor\)|\s*\(aktuális oldal első \d+ sora\)/, '') : keys[i]), blocks: blocks });
         }
         if (!sheets.length) throw new Error('A kijelölt elemekhez nincs exportálható adat.');
         sheets.unshift({ name: 'Tartalom', blocks: [{ title: 'Szolgáltatásfejlesztési riport – Excel-export', notes: ['Készült: ' + todayHu(), exportFooterText ? exportFooterText() : ''],
