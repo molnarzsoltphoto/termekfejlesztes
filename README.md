@@ -82,3 +82,10 @@ Minden tartalmi blokk a címére kattintva becsukható / kinyitható (▾ / ▸)
 ## Vonatnév-elemzés (6. fül)
 
 Kiválasztott vonatnévre és időszakra (utolsó 12 / 3 hónap, naptári év) automatikus, szabályalapú szöveges elemzés grafikonokkal: összefoglaló, forgalom (foglalás / vonat havonta az előző évvel), kihasználtság osztályonként, a hét napjai, vonatonként (90% fölötti közlekedések), csúcsnapok, kerékpár, bisztró, pontosság, végül következtetések és javaslatok. Nyomtatható (A4 PDF) és PowerPointba menthető. A prémium, a fekvőhely és a hálóhely külön szerepel (kihasználtság, előző év, 90% fölötti közlekedések, javaslat); az ülőhely-kihasználtság az 1., 2. osztály és a prémium együtt. Küszöbök: telítettség ≥90%, rendszeres = a közlekedések ≥15%-a (legalább 3 alkalom), alacsony kihasználtság = Ø <35%.
+
+## Balatoni szezon (7. fül)
+
+- Elő-, fő- és utószezon külön, a MÁV balatoni menetrendi időszakai szerint (2024: máj. 13. – jún. 21. / jún. 22. – szept. 1. / szept. 2–22.; 2025: máj. 12. – jún. 20. / jún. 21. – aug. 31. / szept. 1–21.; 2026: máj. 1. – jún. 19. / jún. 20. – aug. 30. / aug. 31. – szept. 20.). Új évnél a `BAL_SEASONS` táblát kell bővíteni.
+- Balatoni vonatok: balatoni végállomású vagy onnan induló helyjegyes vonatok, valamint a déli parton átmenő Budapest/Székesfehérvár – Nagykanizsa, Zágráb vonatok; vonatnevenként szűrhető.
+- Szezononkénti táblázat (foglalás/nap, foglalás/vonat, kihasználtság, osztályok, ≥90%-os közlekedés, kerékpár, Balaton24 napijegy) az előző év azonos szezonjához; napi grafikon (7 napos átlag, előző év azonos hétnapjai); évek összevetése; vonatnevenként; javaslatok. Nyomtatható és PowerPointba menthető.
+- A vonatnév-elemzésben (6. fül) a balatoni vonatneveknél külön „Balatoni szezon” fejezet.
