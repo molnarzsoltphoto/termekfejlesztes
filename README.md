@@ -70,7 +70,7 @@ Minden tartalmi blokk a címére kattintva becsukható / kinyitható (▾ / ▸)
 
 - **Pontdiagram:** vonatnevenként az utasszámmal súlyozott menetrendszerűség és a foglalás / közlekedő vonat változása az előző év azonos hónapjaihoz (a szezonalitás és a járatszám-változás így kiesik; az éjszakai vonatoknál a fekvő- és hálóhely-foglalással együtt), a betöltött menetrendszerűségi hónapokra. Korrelációs együttható és lineáris illesztés; narancs: a hálózatnál rosszabb menetrendszerűségű és gyengébb keresletű vonatnév.
 - **Havi bontás:** a kiválasztott vonatnév menetrendszerűsége és keresletváltozása közös időtengelyen, a hálózati értékkel.
-- **Tartósan romló menetrendszerűség:** legalább 3 hónap adatból lineáris trend vonatnevenként, értékelés a kereslet trendjével együtt.
+- **Tartósan romló menetrendszerűség:** legalább 3 hónap adatból lineáris trend vonatnevenként. A kereslet értékelése: „csökkenő”, ha a foglalás / vonat az időszakban kevesebb, mint egy évvel korábban (vagy a végén már csökken és lefelé tart); „lassuló ütemben nő”, ha még nő, de egyre kevésbé; külön jelzés, ha vonatonként nem csökken, de kevesebb közlekedés miatt az összes foglalás igen.
 - Több hónap menetrendszerűségi kimutatása a szerkesztő 8. mezőjébe egyszerre is kijelölhető. Együttmozgást mutat, nem bizonyított ok-okozatot.
 
 ## Figyelőlista (5. fül)
