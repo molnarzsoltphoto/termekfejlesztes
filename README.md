@@ -19,6 +19,7 @@
 
 1. Nyisd meg a `riport-szerkeszto.html`-t (TEKNO → Havi riport → „Adatfrissítés (szerkesztő)”), jelentkezz be (`szerkeszto` vagy `admin` szerep).
 2. **☁ Betöltés a TEKNO-ból**: a legutóbb feltöltött riport betöltése (beállításokkal együtt), vagy **📂 CSV betöltés**: töltsd be **mindkét** fájlt (járati + napijegy CSV). A járati CSV a teljes időszakot fedje le, mert a betöltés lecseréli az adatot (előző év / YoY ehhez kell).
+Régebbi riportból: **📄 Riport-HTML betöltése** – egy korábbi, adatot tartalmazó `havi-riport.html` vagy titkosított küldhető fájl (jelszóval) adatai a szerkesztőbe kerülnek.
 3. A további fájlok (bisztró, kerékpár, menetrendszerűség stb.) betöltése.
 4. **☁ Feltöltés a TEKNO-ba**: a riport, a beállítások és az Abigél-összesítő a Firestore-ba kerül; a `havi-riport.html` azonnal az új adatot mutatja. GitHub-feltöltés nem kell.
 

@@ -1527,6 +1527,7 @@
         <button id="btn-open-export" class="btn btn-header-ghost" type="button">⬇ Export (PowerPoint / PNG)</button>
       <div id="admin-actions" class="header-actions">
         <button id="btn-open-upload" class="btn btn-header-teal" type="button">📂 CSV betöltés</button>
+        <label class="btn btn-header-teal" style="cursor:pointer;" title="Korábban mentett riport-HTML (régi havi-riport.html vagy titkosított küldhető fájl) adatainak betöltése">📄 Riport-HTML betöltése<input id="input-report-html" type="file" accept=".html,.htm" class="hidden"></label>
         <button id="btn-cloud-load" class="btn btn-header-teal" type="button" title="A TEKNO-ban tárolt jelenlegi adat betöltése (ehhez jönnek a havi új fájlok)">☁ Betöltés a TEKNO-ból</button>
         <button id="btn-cloud-upload" class="btn btn-header-teal" type="button" title="Feltöltés a TEKNO-ba: a TEKNO-ban és Abigélben bejelentkezve ez látszik">☁ Feltöltés a TEKNO-ba</button>
         <button id="btn-export-html" class="btn btn-header-sky" type="button" title="Jelszóval titkosított, önálló HTML-fájl e-mailhez / Teamshez">🔒 Titkosított HTML mentése</button>
@@ -9654,7 +9655,37 @@
       });
     }
 
+    // Régi (adatos) havi-riport.html vagy titkosított küldhető fájl betöltése a szerkesztőbe
+    async function importReportHtml(file) {
+      var text = await file.text();
+      var m = text.match(/<script[^>]*id=["']embedded-data["'][^>]*>([\s\S]*?)<\/script>/i);
+      if (!m) throw new Error('Ez nem a havi riport HTML-je (nincs benne adatblokk).');
+      var parsed = JSON.parse(m[1].trim() || '{}');
+      if (parsed.enc && parsed.ct) {
+        parsed = await secGate('password', { onPassword: function (pw) { return decryptWrapper(parsed, pw); } });
+        if (!parsed) return false;
+      }
+      if (!(parsed.format && parsed.payload)) throw new Error('Ebben a fájlban nincs adat (ez az adat nélküli, bejelentkezős változat). A régi, adatot tartalmazó havi-riport.html-t vagy egy titkosított küldhető fájlt tölts be.');
+      secProgress('Adatok kibontása…');
+      var wasRO = state.readonly;
+      await applyWrapper(Object.assign({}, parsed, { readonly: false }));
+      state.readonly = wasRO;
+      document.body.setAttribute('data-readonly', wasRO ? 'true' : 'false');
+      secProgress(null);
+      renderAll();
+      if (state.isDemo) showToast('A fájl csak mintaadatot tartalmaz – ezt nem érdemes feltölteni.', 'warn');
+      else showToast('Riport betöltve: ' + file.name + (parsed.exportedAt ? ' (mentve: ' + String(parsed.exportedAt).replace('T', ' ').slice(0, 16) + ')' : '') + '. Ellenőrizd, majd „Feltöltés a TEKNO-ba”.', 'success');
+      return true;
+    }
+
     function bindSecureEvents() {
+      var rh = document.getElementById('input-report-html');
+      if (rh) rh.addEventListener('change', async function () {
+        var f = rh.files[0];
+        rh.value = '';
+        if (!f) return;
+        try { await importReportHtml(f); } catch (err) { secProgress(null); showToast(err.message, 'error'); }
+      });
       var up = document.getElementById('btn-cloud-upload'), ld = document.getElementById('btn-cloud-load'), lo = document.getElementById('sec-logout');
       if (up) up.addEventListener('click', cloudUpload);
       if (ld) ld.addEventListener('click', cloudLoadIntoEditor);
