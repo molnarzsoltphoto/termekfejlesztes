@@ -68,7 +68,7 @@ Minden tartalmi blokk a címére kattintva becsukható / kinyitható (▾ / ▸)
 
 ## Pontosság és kereslet (4. fül, 6. kártya)
 
-- **Pontdiagram:** vonatnevenként az utasszámmal súlyozott pontosság és a foglalás / közlekedő vonat változása az előző év azonos hónapjaihoz (a szezonalitás és a járatszám-változás így kiesik), a betöltött menetrendszerűségi hónapokra. Korrelációs együttható és lineáris illesztés; narancs: a hálózatnál pontatlanabb és gyengébb keresletű vonatnév.
+- **Pontdiagram:** vonatnevenként az utasszámmal súlyozott pontosság és a foglalás / közlekedő vonat változása az előző év azonos hónapjaihoz (a szezonalitás és a járatszám-változás így kiesik; az éjszakai vonatoknál a fekvő- és hálóhely-foglalással együtt), a betöltött menetrendszerűségi hónapokra. Korrelációs együttható és lineáris illesztés; narancs: a hálózatnál pontatlanabb és gyengébb keresletű vonatnév.
 - **Havi bontás:** a kiválasztott vonatnév pontossága és keresletváltozása közös időtengelyen, a hálózati értékkel.
 - **Tartósan romló pontosság:** legalább 3 hónap adatból lineáris trend vonatnevenként, értékelés a kereslet trendjével együtt.
 - Több hónap menetrendszerűségi kimutatása a szerkesztő 8. mezőjébe egyszerre is kijelölhető. Együttmozgást mutat, nem bizonyított ok-okozatot.
