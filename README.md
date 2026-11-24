@@ -60,28 +60,28 @@ A szerkesztő feltöltéskor egy kis JSON-összesítőt is ír a Firestore `ripo
 ## Kerékpáros viszonylatok és menetrendszerűség
 
 - **Kerékpárjegyek jegy-szinten (R155 CSV, szerkesztő 7. mező):** egy fájlban több év is lehet (a hónap az értékesítés időpontjából jön; a fájlban lévő hónapokat felülírja). A böngésző darabonként olvassa, így a 900 MB-os, 2024 óta tartó export is betölthető, `.zip`-be vagy `.gz`-be tömörítve is. Excelbe mentve ne: az 1 048 576 sornál levág. A térkép időszaka: hónap, naptári év, utolsó 12 hónap vagy az összes, és követi a 4. fül időszakszűrőjét. Település kiválasztható (keresővel vagy a térképen a pontra kattintva): „Innen hova” / „Honnan ide” nézetben a célt vagy indulást település szerint mutatja, a település állomásainak megoszlásával. Az állomások települését a KSH-településhatárok adják (pl. Kiskundorozsma → Szeged, Kőbánya-Kispest → Budapest). Viszonylatokká összesítve (indulási–célállomás, mindkét irány együtt) a kerékpár-térkép „Utazási viszonylatok” rétegén, alatta a 20 legnépszerűbb viszonylat táblázata, oldalt az értékesítési csatornák. Sztornózott és visszatérített jegyek nélkül. A térkép vonalai az indulási és célállomást kötik össze, nem az útvonalat.
-- **Menetrendszerűség (xlsx, szerkesztő 8. mező):** a 4. fül 5. kártyáján a 25 legrosszabb pontosságú vonat (szegmens- és minimális utasszám-szűrővel), vonatszám szerint összekötve a járati adattal (vonatnév, reláció, kihasználtság, kerékpárhely, bisztró), valamint vonatnév szerinti összesítő. A kártyán saját kereső van (vonatnév, vonatszám vagy állomás): kereséskor az összes találat látszik, nem csak a 25 legrosszabb. Az 1. fül táblázatában „Pontosság” oszlop, ha a szűrt időszakban van menetrendszerűségi adat.
+- **Menetrendszerűség (xlsx, szerkesztő 8. mező):** a 4. fül 5. kártyáján a 25 legrosszabb menetrendszerűségű vonat (szegmens- és minimális utasszám-szűrővel), vonatszám szerint összekötve a járati adattal (vonatnév, reláció, kihasználtság, kerékpárhely, bisztró), valamint vonatnév szerinti összesítő. A kártyán saját kereső van (vonatnév, vonatszám vagy állomás): kereséskor az összes találat látszik, nem csak a 25 legrosszabb. Az 1. fül táblázatában „Menetrendszerűség” oszlop, ha a szűrt időszakban van menetrendszerűségi adat.
 
 ## Lenyitható blokkok
 
 Minden tartalmi blokk a címére kattintva becsukható / kinyitható (▾ / ▸). Az állapotot a böngésző megjegyzi; exportkor a becsukott blokkok is bekerülnek.
 
-## Pontosság és kereslet (4. fül, 6. kártya)
+## Menetrendszerűség és kereslet (4. fül, 6. kártya)
 
-- **Pontdiagram:** vonatnevenként az utasszámmal súlyozott pontosság és a foglalás / közlekedő vonat változása az előző év azonos hónapjaihoz (a szezonalitás és a járatszám-változás így kiesik; az éjszakai vonatoknál a fekvő- és hálóhely-foglalással együtt), a betöltött menetrendszerűségi hónapokra. Korrelációs együttható és lineáris illesztés; narancs: a hálózatnál pontatlanabb és gyengébb keresletű vonatnév.
-- **Havi bontás:** a kiválasztott vonatnév pontossága és keresletváltozása közös időtengelyen, a hálózati értékkel.
-- **Tartósan romló pontosság:** legalább 3 hónap adatból lineáris trend vonatnevenként, értékelés a kereslet trendjével együtt.
+- **Pontdiagram:** vonatnevenként az utasszámmal súlyozott menetrendszerűség és a foglalás / közlekedő vonat változása az előző év azonos hónapjaihoz (a szezonalitás és a járatszám-változás így kiesik; az éjszakai vonatoknál a fekvő- és hálóhely-foglalással együtt), a betöltött menetrendszerűségi hónapokra. Korrelációs együttható és lineáris illesztés; narancs: a hálózatnál rosszabb menetrendszerűségű és gyengébb keresletű vonatnév.
+- **Havi bontás:** a kiválasztott vonatnév menetrendszerűsége és keresletváltozása közös időtengelyen, a hálózati értékkel.
+- **Tartósan romló menetrendszerűség:** legalább 3 hónap adatból lineáris trend vonatnevenként, értékelés a kereslet trendjével együtt.
 - Több hónap menetrendszerűségi kimutatása a szerkesztő 8. mezőjébe egyszerre is kijelölhető. Együttmozgást mutat, nem bizonyított ok-okozatot.
 
 ## Figyelőlista (5. fül)
 
 - Vonatszám, vonatnév, reláció (vonatok és helyjegyes buszok végállomásai szerint) vagy kerékpáros viszonylat vehető fel, döntés / megjegyzés és hatályba lépés hónapja megadásával.
-- Kártyánként: utolsó hónap foglalása, előző év, foglalás / vonat változása, kihasználtság, pontosság, 24 havi grafikon az előző évvel; hatálybalépés esetén a döntés előtti 3 és utáni legfeljebb 6 hónap előző évhez mért változásának összevetése.
+- Kártyánként: utolsó hónap foglalása, előző év, foglalás / vonat változása, kihasználtság, menetrendszerűség, 24 havi grafikon az előző évvel; hatálybalépés esetén a döntés előtti 3 és utáni legfeljebb 6 hónap előző évhez mért változásának összevetése.
 - A lista a Firestore `riport/watch` dokumentumában van: mindenki látja, `szerkeszto` / `admin` szerkeszti (a riport oldaláról is, bejelentkezve). A titkosított küldhető fájlba a mentéskori lista kerül.
 
 ## Vonatnév-elemzés (6. fül)
 
-Kiválasztott vonatnévre és időszakra (utolsó 12 / 3 hónap, naptári év, egy hónap, egy hét vagy egy nap; hétnél és napnál az előző év azonos hétnapjaihoz mérve) automatikus, szabályalapú szöveges elemzés grafikonokkal: összefoglaló, forgalom (foglalás / vonat havonta az előző évvel), kihasználtság osztályonként, a hét napjai, vonatonként (90% fölötti közlekedések), csúcsnapok, kerékpár, bisztró, pontosság, végül következtetések és javaslatok. Nyomtatható (A4 PDF) és PowerPointba menthető. A prémium, a fekvőhely és a hálóhely külön szerepel (kihasználtság, előző év, 90% fölötti közlekedések, javaslat); az ülőhely-kihasználtság az 1., 2. osztály és a prémium együtt. Küszöbök: telítettség ≥90%, rendszeres = a közlekedések ≥15%-a (legalább 3 alkalom), alacsony kihasználtság = Ø <35%.
+Kiválasztott vonatnévre és időszakra (utolsó 12 / 3 hónap, naptári év, egy hónap, egy hét vagy egy nap; hétnél és napnál az előző év azonos hétnapjaihoz mérve) automatikus, szabályalapú szöveges elemzés grafikonokkal: összefoglaló, forgalom (foglalás / vonat havonta az előző évvel), kihasználtság osztályonként, a hét napjai, vonatonként (90% fölötti közlekedések), csúcsnapok, kerékpár, bisztró, menetrendszerűség, végül következtetések és javaslatok. Nyomtatható (A4 PDF) és PowerPointba menthető. A prémium, a fekvőhely és a hálóhely külön szerepel (kihasználtság, előző év, 90% fölötti közlekedések, javaslat); az ülőhely-kihasználtság az 1., 2. osztály és a prémium együtt. Küszöbök: telítettség ≥90%, rendszeres = a közlekedések ≥15%-a (legalább 3 alkalom), alacsony kihasználtság = Ø <35%.
 
 ## Balatoni szezon (7. fül)
 
@@ -93,5 +93,5 @@ Kiválasztott vonatnévre és időszakra (utolsó 12 / 3 hónap, naptári év, e
 
 ## Hibrid InterCityk és bisztró-KPI
 
-- Hibrid (nem helyjegyköteles) InterCityk: NAPFÉNY, KRESZ GÉZA, SOMOGY, RIPPL-RÓNAI, BAKONY, GÖCSEJ, BÉKÉS, valamint a balatoni elő-, fő- és utószezonon kívül a BALATON és a TÓPART. Jelölés („hibrid IC”) az 1. fül táblázatában és figyelmeztetés a KPI-k alatt, a 4. fül vonatcelláiban, a vonatnév-elemzésben (a kapacitás-csökkentési javaslat helyett figyelmeztetéssel) és a figyelőlistán. Lista: `HYB_ALWAYS` / `HYB_OFFSEASON` a kódban.
+- Hibrid (nem helyjegyköteles) InterCityk: NAPFÉNY, KRESZ GÉZA, SOMOGY, RIPPL-RÓNAI, BAKONY, GÖCSEJ, BÉKÉS, valamint a balatoni elő-, fő- és utószezonon kívül a BALATON és a TÓPART. A foglaltsági adatok náluk csak az IC vonatrészre vonatkoznak. Jelölés („hibrid IC”) az 1. fül táblázatában és figyelmeztetés a KPI-k alatt, a 4. fül vonatcelláiban, a vonatnév-elemzésben (a kapacitás-csökkentési javaslat helyett figyelmeztetéssel) és a figyelőlistán. Lista: `HYB_ALWAYS` / `HYB_OFFSEASON` a kódban.
 - 1. fül: külön „Bisztró eladások” KPI-kártya (tranzakció, bevétel, átlagkosár) a szűrésre, ha a bisztró-munkafüzet be van töltve.

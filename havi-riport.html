@@ -1463,7 +1463,7 @@
     .sec-user button { background: none; border: 1px solid rgba(255,255,255,.4); color: #fff; border-radius: 6px; padding: 3px 8px; font-size: 12px; cursor: pointer; }
     .sec-user.hidden { display: none; }
 
-    /* Pontosság és kereslet, figyelőlista */
+    /* Menetrendszerűség és kereslet, figyelőlista */
     .pd-detail-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 18px 0 6px; }
     .pd-legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--text-secondary); margin: 4px 0 8px; align-items: center; }
     .pd-legend i { display: inline-block; width: 14px; height: 4px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
@@ -2103,7 +2103,7 @@
           <div class="card-header">
             <div>
               <h2 class="card-title">5. Menetrendszerűség</h2>
-              <div class="card-subtitle">A legrosszabb pontosságú vonatok, vonatszám szerint összekötve a foglalási, kerékpár- és bisztróadatokkal</div>
+              <div class="card-subtitle">A legrosszabb menetrendszerűségű vonatok, vonatszám szerint összekötve a foglalási, kerékpár- és bisztróadatokkal</div>
             </div>
           </div>
           <div id="t4-pc-body"></div>
@@ -2112,8 +2112,8 @@
         <div class="card">
           <div class="card-header">
             <div>
-              <h2 class="card-title">6. Pontosság és kereslet</h2>
-              <div class="card-subtitle">Romló pontosság mellett csökken-e a foglalás? Vonatnév szerint, az előző év azonos hónapjaihoz mérve</div>
+              <h2 class="card-title">6. Menetrendszerűség és kereslet</h2>
+              <div class="card-subtitle">Romló menetrendszerűség mellett csökken-e a foglalás? Vonatnév szerint, az előző év azonos hónapjaihoz mérve</div>
             </div>
           </div>
           <div id="t4-pd-body"></div>
@@ -2330,7 +2330,7 @@
           <div class="dropzone-top">
             <div>
               <div class="dropzone-title">8. Menetrendszerűség (opcionális, <code>.xlsx</code>)</div>
-              <div class="dropzone-desc">Vonatszám szerinti havi kimutatás (Vonatszám, Szegm, Pontosság %, VTK utasszám). A 4. fülön a 25 legrosszabb vonat, az 1. fül táblázatában külön oszlop; vonatszám szerint kötve a járati adathoz.</div>
+              <div class="dropzone-desc">Vonatszám szerinti havi kimutatás (Vonatszám, Szegm, Menetrendszerűség %, VTK utasszám). A 4. fülön a 25 legrosszabb vonat, az 1. fül táblázatában külön oszlop; vonatszám szerint kötve a járati adathoz.</div>
             </div>
             <label class="btn btn-primary" style="cursor:pointer;">
               Fájl kiválasztása
@@ -2574,7 +2574,7 @@
       bikeOD: null,
       watch: null,                // figyelőlista: [{ id, type: num|name|pair|bike, key, note, from, by, at }]
       role: null,               // { months: { 'YYYY-MM': { pairs: [[honnan, hová, db, km, Ft]], channels, storno, refund } } }
-      punct: null,                // { months: { 'YYYY-MM': { label, byNum: { vonatszám: [szegmens, pontosság 0–1, VTK utas] } } } }
+      punct: null,                // { months: { 'YYYY-MM': { label, byNum: { vonatszám: [szegmens, menetrendszerűség 0–1, VTK utas] } } } }
                 // { months: { 'YYYY-MM': { month, product, rows: [név, régió, db, Ft, utaskm] } } }
       t4: { bikeLayer: '', pcMonth: '', pcSeg: 'all', pcMinVtk: 30, bikeMonth: '', bikeView: 'hu', pmode: 'last12', year: '', month: '', wday: '', day: '', season: 'all', parity: 'all', sort: 'train', search: '', c2Thr: 90, c1Thr: 50, bzFlagged: true },
       bisz: null,                 // bisztró bevétel / tranzakció (vonatszám × nap)
@@ -4513,7 +4513,7 @@
         var pcMs = (t1._activeMonths || []).filter(function (m) { return state.punct && state.punct.months && state.punct.months[m]; });
         if (pcMs.length) {
           rows.forEach(function (r) { r.punct = punctAvg(r.num, pcMs); });
-          cols.push({ key: 'punct', label: 'Pontosság (' + (pcMs.length === 1 ? pcMs[0].replace('-', '.') : pcMs.length + ' hó átlaga') + ')', num: true, render: function (r) {
+          cols.push({ key: 'punct', label: 'Menetrendszerűség (' + (pcMs.length === 1 ? pcMs[0].replace('-', '.') : pcMs.length + ' hó átlaga') + ')', num: true, render: function (r) {
             return r.punct === null || r.punct === undefined ? '<span class="occ-none">—</span>' : fmtPunctPill(100 * r.punct);
           } });
         }
@@ -5406,7 +5406,7 @@
       { key: 't4cls',  group: 'Kínálatfejlesztési jelzések', label: 'Osztályok közti eltolódás (első 12 sor)', file: 'osztaly_eltolodas', def: false },
       { key: 't4bikemap', group: 'Kínálatfejlesztési jelzések', label: 'Kerékpár-térkép (a kiválasztott réteg: viszonylatok vagy eladási hely)', file: 'kerekparjegy_terkep', def: false },
       { key: 't4bikeod', group: 'Kínálatfejlesztési jelzések', label: 'Kerékpáros viszonylatok táblázata (top 20, vagy a kiválasztott település kapcsolatai)', file: 'kerekpar_viszonylatok', def: false },
-      { key: 't4pd', group: 'Kínálatfejlesztési jelzések', label: 'Pontosság és kereslet (pontdiagram)', file: 'pontossag_kereslet', def: false, avail: function () { return !!(state.punct && Object.keys(state.punct.months).length); } },
+      { key: 't4pd', group: 'Kínálatfejlesztési jelzések', label: 'Menetrendszerűség és kereslet (pontdiagram)', file: 'pontossag_kereslet', def: false, avail: function () { return !!(state.punct && Object.keys(state.punct.months).length); } },
       { key: 'wl', group: 'Figyelőlista', label: 'Figyelőlista – összesítő táblázat', file: 'figyelolista', def: false, avail: function () { return wlList().length > 0; } },
       { key: 't4punct', group: 'Kínálatfejlesztési jelzések', label: 'Menetrendszerűség – 25 legrosszabb vonat', file: 'menetrendszeruseg', def: false },
       { key: 't4bike', group: 'Kínálatfejlesztési jelzések', label: 'Kerékpár-radar (első 12 sor)', file: 'kerekpar_radar', def: false },
@@ -6149,9 +6149,9 @@
         if (key === 't4pd') {
           var pds = document.querySelector('#pd-scatter svg');
           if (!pds) return null;
-          return { key: key, tab: 't4', kind: 'image', title: 'Pontosság és keresletváltozás vonatnév szerint',
+          return { key: key, tab: 't4', kind: 'image', title: 'Menetrendszerűség és keresletváltozás vonatnév szerint',
             subtitle: Array.from(document.querySelectorAll('#t4-pd-body .t4-kpis > div')).map(function (d) { return txt(d.querySelector('span')) + ': ' + txt(d.querySelector('strong')); }).join(' • '),
-            spec: { legend: [], extra: ['Pont: vonatnév, mérete a foglalások száma. Narancs: a hálózatnál pontatlanabb és gyengébb keresletű. Együttmozgás, nem bizonyított ok-okozat.'], body: imgBody(await svgToImage(pds)) } };
+            spec: { legend: [], extra: ['Pont: vonatnév, mérete a foglalások száma. Narancs: a hálózatnál rosszabb menetrendszerűségű és gyengébb keresletű. Együttmozgás, nem bizonyított ok-okozat.'], body: imgBody(await svgToImage(pds)) } };
         }
         var t4sub = txt(id('t4-subtitle'));
         var t4tab = function (sel) { return document.querySelector(sel); };
@@ -9081,7 +9081,7 @@
         if (p !== null && p > 1.5) p = p / 100;
         by[n] = [String(row[cSeg] || '').trim(), p === null ? null : Math.round(p * 10000) / 10000, Math.round(cellNum(row[cV]) * 10) / 10];
       }
-      return { month: m[1] + '-' + m[2], label: String(rows[hi][cP] || 'Pontosság').trim(), byNum: by };
+      return { month: m[1] + '-' + m[2], label: String(rows[hi][cP] || 'Menetrendszerűség').trim(), byNum: by };
     }
     async function handlePunctFile(file, buf, dz, statusEl) {
       var bytes = new Uint8Array(buf);
@@ -9100,7 +9100,7 @@
       showToast('Menetrendszerűség betöltve (' + res.month + ')', 'success');
     }
     function punctMonths() { return state.punct && state.punct.months ? Object.keys(state.punct.months).sort().reverse() : []; }
-    // Átlagos pontosság a megadott hónapokban (1. fül táblázatához)
+    // Átlagos menetrendszerűség a megadott hónapokban (1. fül táblázatához)
     function punctAvg(num, months) {
       if (!state.punct) return null;
       var s = 0, k = 0;
@@ -9140,7 +9140,7 @@
     }
 
     var PC_SEG = { O: 'Szegmens O', FO: 'Szegmens FO', R: 'Szegmens R', EV: 'Szegmens EV' };
-    // Pontosság: magas = jó (zöld), alacsony = rossz (piros) – fordítva, mint a kihasználtságnál
+    // Menetrendszerűség: magas = jó (zöld), alacsony = rossz (piros) – fordítva, mint a kihasználtságnál
     function fmtPunctPill(pct) {
       if (pct === null || pct === undefined || !Number.isFinite(pct)) return '<span class="occ-none">—</span>';
       var c = pct >= 80 ? ['#dcfce7', '#166534'] : (pct >= 50 ? ['#fef3c7', '#92400e'] : ['#fee2e2', '#991b1b']);
@@ -9191,7 +9191,7 @@
       }).join('') + '</div>';
       h += '<h3 class="t4-h3">' + (qq ? 'Keresés: „' + escHtml(t4.pcSearch.trim()) + '” – ' + rows.length + ' vonat, a legrosszabb menetrendszerűségűtől' :
         EXPORT_FULL ? 'Minden vonat, a legrosszabb menetrendszerűségűtől' : 'A 25 legrosszabb menetrendszerűségű vonat' + (rows.length < 25 ? ' (' + rows.length + ')' : '')) + '</h3>' +
-        '<div class="table-wrap"><table class="data-table t4-pc"><thead><tr><th class="num">#</th><th>Vonat</th><th>Szegmens</th><th class="num">' + escHtml(P.label.replace(/\s*%$/, '')) + '</th><th class="num">Ø utas (VTK)</th><th>Reláció</th><th>Vonatnem</th><th class="num">Közl. nap</th><th class="num">Ø kihaszn. (helyjegy)</th><th class="num">Ø foglalt / vonat</th><th class="num">Kerékpárhely tele (nap)</th><th class="num">Bisztró tr. / 100 utas</th></tr></thead><tbody>';
+        '<div class="table-wrap"><table class="data-table t4-pc"><thead><tr><th class="num">#</th><th>Vonat</th><th>Szegmens</th><th class="num">' + escHtml(P.label.replace(/\s*%$/, '').replace(/pontoss[aá]g/i, 'Menetrendszerűség')) + '</th><th class="num">Ø utas (VTK)</th><th>Reláció</th><th>Vonatnem</th><th class="num">Közl. nap</th><th class="num">Ø kihaszn. (helyjegy)</th><th class="num">Ø foglalt / vonat</th><th class="num">Kerékpárhely tele (nap)</th><th class="num">Bisztró tr. / 100 utas</th></tr></thead><tbody>';
       worst.forEach(function (x, i) {
         var o = x.o;
         h += '<tr><td class="num">' + (i + 1) + '</td><td>' + (o ? t4TrainCell({ name: o.name, num: x.num, dep: o.dep }) : '<strong>' + escHtml(x.num) + '</strong><br><span class="fc-small">nincs a helyjegyes járati adatban</span>') + '</td>' +
@@ -9215,10 +9215,10 @@
       });
       var nm = Array.from(byName.values()).filter(function (e) { return (qq || e.n >= 2) && e.name.charAt(0) !== '('; }).map(function (e) { e.avg = e.pw / e.w; return e; }).sort(function (a, b) { return a.avg - b.avg; }).slice(0, EXPORT_FULL || qq ? Infinity : 10);
       if (nm.length) {
-        h += '<h3 class="t4-h3">' + (qq ? 'A keresésnek megfelelő vonatnevek (utasszámmal súlyozva)' : 'Vonatnév szerint a 10 legrosszabb (utasszámmal súlyozva, legalább 2 vonat)') + '</h3><div class="table-wrap"><table class="data-table t4-only t4-pcn"><thead><tr><th>Vonatnév</th><th class="num">Vonat</th><th class="num">Pontosság (súlyozott)</th><th>Legrosszabb vonat</th></tr></thead><tbody>' +
+        h += '<h3 class="t4-h3">' + (qq ? 'A keresésnek megfelelő vonatnevek (utasszámmal súlyozva)' : 'Vonatnév szerint a 10 legrosszabb (utasszámmal súlyozva, legalább 2 vonat)') + '</h3><div class="table-wrap"><table class="data-table t4-only t4-pcn"><thead><tr><th>Vonatnév</th><th class="num">Vonat</th><th class="num">Menetrendszerűség (súlyozott)</th><th>Legrosszabb vonat</th></tr></thead><tbody>' +
           nm.map(function (e) { return '<tr><td><strong>' + escHtml(e.name) + '</strong></td><td class="num">' + e.n + '</td><td class="num">' + fmtPunctPill(100 * e.avg) + '</td><td>' + escHtml(e.worst.num) + ' (' + fmtPct(100 * e.worst.p, 0) + ')</td></tr>'; }).join('') + '</tbody></table></div>';
       }
-      h += '<div class="fc-small" style="margin-top:6px;">Forrás: menetrendszerűségi kimutatás, ' + escHtml(monthLbl(t4.pcMonth)) + ' („' + escHtml(P.label) + '”, VTK = átlagos utasszám; a szegmenskódok a forrás szerint). Vonatszám szerint ' + fmtInt(joinedN) + ' vonat köthető a helyjegyes járati adathoz; a többinél (pl. elővárosi, regionális, nemzetközi számozású vonatok) csak a pontosság látszik. Az alacsony utasszámú vonatokat az „Ø utas legalább” szűrő zárja ki.</div>';
+      h += '<div class="fc-small" style="margin-top:6px;">Forrás: menetrendszerűségi kimutatás, ' + escHtml(monthLbl(t4.pcMonth)) + ' („' + escHtml(P.label.replace(/pontoss[aá]g/i, 'Menetrendszerűség')) + '”, VTK = átlagos utasszám; a szegmenskódok a forrás szerint). Vonatszám szerint ' + fmtInt(joinedN) + ' vonat köthető a helyjegyes járati adathoz; a többinél (pl. elővárosi, regionális, nemzetközi számozású vonatok) csak a menetrendszerűség látszik. Az alacsony utasszámú vonatokat az „Ø utas legalább” szűrő zárja ki.</div>';
       host.innerHTML = h;
       document.getElementById('pc-month').addEventListener('change', function (e) { t4.pcMonth = e.target.value; renderPunct(); });
       var ps = document.getElementById('pc-search'), psT = null;
@@ -9478,7 +9478,7 @@
         var ps = id('pd-scatter'), pb = [];
         if (ps && ps._xlsx) pb.push({ title: title, notes: notes, head: ps._xlsx.head, rows: ps._xlsx.rows });
         var pt = q('#t4-pd-body table.t4-pdt');
-        if (pt) { var px = xTable(pt); if (px) pb.push({ title: 'Tartósan romló pontosság', head: px.head, rows: px.rows }); }
+        if (pt) { var px = xTable(pt); if (px) pb.push({ title: 'Tartósan romló menetrendszerűség', head: px.head, rows: px.rows }); }
         return pb.length ? pb : null;
       }
       if (key === 'wl') return block(xTable(q('#wl-summary table')));
@@ -9928,7 +9928,7 @@
       });
       return out;
     }
-    // Ugyanez a fekvő- és hálóhellyel együtt (minden foglalás és férőhely) – a pontosság–kereslet elemzéshez
+    // Ugyanez a fekvő- és hálóhellyel együtt (minden foglalás és férőhely) – a menetrendszerűség–kereslet elemzéshez
     function moSeriesAll(routeIdx) {
       var s = moSeries(routeIdx);
       for (var m = 0; m < s.bk.length; m++) { s.bk[m] += s.sbk[m]; s.cap[m] += s.scap[m]; }
@@ -9974,8 +9974,8 @@
     function fmtSigned(v, dec, unit) { return v === null || !Number.isFinite(v) ? '—' : (v > 0 ? '+' : (v < 0 ? '−' : '±')) + fmtDec(Math.abs(v), dec) + (unit || ''); }
     function fmtDec(v, dec) { return v.toLocaleString('hu-HU', { minimumFractionDigits: dec, maximumFractionDigits: dec }); }
 
-    /* ---------------- 6. Pontosság és kereslet ---------------- */
-    // Vonatnevenként és hónaponként: VTK-val súlyozott pontosság + foglalás / vonat (és előző év)
+    /* ---------------- 6. Menetrendszerűség és kereslet ---------------- */
+    // Vonatnevenként és hónaponként: VTK-val súlyozott menetrendszerűség + foglalás / vonat (és előző év)
     function pdModel() {
       var occ = state.occ, pms = punctMonths().slice().reverse(), mo = occMonthly();
       var key = pms.join(',') + '|' + occ.rowCount;
@@ -10036,7 +10036,7 @@
       if (!pms0.length) { host.innerHTML = '<div class="empty-state" style="padding:24px;">Nincs betöltött menetrendszerűségi adat. A szerkesztő 8. mezőjébe hónaponként egy-egy kimutatás tölthető be (egyszerre több fájl is kijelölhető).</div>'; return; }
       var M = pdModel(), mo = M.mo, pms = M.pms;
       var withPy = pms.filter(function (m) { return mo.mIdx[moPrev(m)] !== undefined && mo.mIdx[m] !== undefined; });
-      // pontdiagram: vonatnevek az összes betöltött pontossági hónapra
+      // pontdiagram: vonatnevek az összes betöltött menetrendszerűségi hónapra
       var pts = [];
       M.names.forEach(function (e) {
         var p = pdPeriodP(e, withPy), y = bprYoY(e.s, mo, withPy);
@@ -10049,13 +10049,13 @@
       var rTxt = r === null ? 'kevés adat' : ('r = ' + fmtDec(r, 2).replace('-', '−') + ' (' + (Math.abs(r) < 0.2 ? 'nincs érdemi' : Math.abs(r) < 0.4 ? 'gyenge' : Math.abs(r) < 0.6 ? 'közepes' : 'erős') + (Math.abs(r) >= 0.2 ? (r > 0 ? ' pozitív' : ' negatív') : '') + ' kapcsolat, ' + pts.length + ' vonatnév)');
       var perLbl = withPy.length ? (withPy.length === 1 ? moLabelLong(withPy[0]) : moLabelLong(withPy[0]) + ' – ' + moLabelLong(withPy[withPy.length - 1]) + ' (' + withPy.length + ' hónap)') : '—';
       var h = '<div class="t4-kpis">' +
-        '<div><span>Vizsgált időszak (pontossági adat)</span><strong style="font-size:15px">' + perLbl + '</strong></div>' +
-        '<div><span>Hálózati pontosság (utassal súlyozva)</span><strong>' + (netP === null ? '—' : fmtPct(100 * netP, 1)) + '</strong></div>' +
+        '<div><span>Vizsgált időszak (menetrendszerűségi adat)</span><strong style="font-size:15px">' + perLbl + '</strong></div>' +
+        '<div><span>Hálózati menetrendszerűség (utassal súlyozva)</span><strong>' + (netP === null ? '—' : fmtPct(100 * netP, 1)) + '</strong></div>' +
         '<div><span>Hálózati foglalás / vonat, előző évhez</span><strong>' + (netY ? fmtSigned(netY.yoy, 1, '%') : '—') + '</strong></div>' +
-        '<div><span>Pontosság és keresletváltozás</span><strong style="font-size:15px">' + rTxt + '</strong></div></div>';
-      h += '<h3 class="t4-h3">Vonatnevek: pontosság és keresletváltozás</h3><div id="pd-scatter"></div>' +
-        '<div class="fc-small">Pont: vonatnév (legalább 1 000 foglalás az időszakban), mérete a foglalások száma. Vízszintesen az utasszámmal súlyozott pontosság, függőlegesen a foglalás / közlekedő vonat változása az előző év azonos hónapjaihoz képest (ez kiszűri a szezonalitást és a járatszám-változást; az éjszakai vonatoknál a fekvő- és hálóhely-foglalással együtt). Szaggatott vonalak: hálózati érték; ' +
-        '<span style="color:#b45309;font-weight:700">narancs</span> pont = a hálózatnál pontatlanabb és gyengébb keresletű vonatnév; ±60% fölötti változás a szélen. Folytonos vonal: lineáris illesztés' + (slope !== null ? ' (10 százalékponttal jobb pontosság ≈ ' + fmtSigned(10 * slope, 1, ' százalékpont') + ' a keresletváltozásban)' : '') + '. Ez együttmozgás, nem bizonyított ok-okozat: a pontatlan vonatok gyakran más okból (pályafelújítás, vonatpótlás, kapacitáscsökkentés) is veszítenek utast. Kattints egy pontra a havi bontásért.</div>';
+        '<div><span>Menetrendszerűség és keresletváltozás</span><strong style="font-size:15px">' + rTxt + '</strong></div></div>';
+      h += '<h3 class="t4-h3">Vonatnevek: menetrendszerűség és keresletváltozás</h3><div id="pd-scatter"></div>' +
+        '<div class="fc-small">Pont: vonatnév (legalább 1 000 foglalás az időszakban), mérete a foglalások száma. Vízszintesen az utasszámmal súlyozott menetrendszerűség, függőlegesen a foglalás / közlekedő vonat változása az előző év azonos hónapjaihoz képest (ez kiszűri a szezonalitást és a járatszám-változást; az éjszakai vonatoknál a fekvő- és hálóhely-foglalással együtt). Szaggatott vonalak: hálózati érték; ' +
+        '<span style="color:#b45309;font-weight:700">narancs</span> pont = a hálózatnál rosszabb menetrendszerűségű és gyengébb keresletű vonatnév; ±60% fölötti változás a szélen. Folytonos vonal: lineáris illesztés' + (slope !== null ? ' (10 százalékponttal jobb menetrendszerűség ≈ ' + fmtSigned(10 * slope, 1, ' százalékpont') + ' a keresletváltozásban)' : '') + '. Ez együttmozgás, nem bizonyított ok-okozat: a rossz menetrendszerűségű vonatok gyakran más okból (pályafelújítás, vonatpótlás, kapacitáscsökkentés) is veszítenek utast. Kattints egy pontra a havi bontásért.</div>';
       // tartós romlás
       var trend = [];
       if (pms.length >= 3) {
@@ -10083,17 +10083,17 @@
       h += '<div class="pd-detail-head"><h3 class="t4-h3" style="margin:0;">Havi bontás</h3><select id="pd-name" class="select-control" style="width:auto;">' +
         opts.map(function (e) { return '<option value="' + escHtml(e.name) + '"' + (e.name === t4.pdName ? ' selected' : '') + '>' + escHtml(e.name) + '</option>'; }).join('') + '</select>' +
         '<button id="pd-watch" class="btn btn-outline btn-sm" type="button">☆ Figyelőlistára</button></div><div id="pd-lines"></div>';
-      h += '<h3 class="t4-h3">Tartósan romló pontosság – mi történt a kereslettel?</h3>';
+      h += '<h3 class="t4-h3">Tartósan romló menetrendszerűség – mi történt a kereslettel?</h3>';
       if (pms.length < 3) {
         h += '<div class="empty-state" style="padding:16px;">A trendhez legalább 3 hónap menetrendszerűségi adat kell; most ' + pms.length + ' hónap van betöltve. A szerkesztő 8. mezőjébe az előző hónapok kimutatásai is betölthetők (egyszerre több fájl).</div>';
       } else {
         var shown = trend.filter(function (t) { return EXPORT_FULL || t.sl <= -0.5; }).slice(0, EXPORT_FULL ? Infinity : 15);
-        h += '<div class="table-wrap"><table class="data-table t4-only t4-pdt"><thead><tr><th>Vonatnév</th><th class="num">Hónap</th><th class="num">Pontosság (első → utolsó)</th><th class="num">Trend (százalékpont / hó)</th><th class="num">Foglalás / vonat YoY (első → utolsó)</th><th class="num">YoY trend (százalékpont / hó)</th><th>Értékelés</th></tr></thead><tbody>' +
+        h += '<div class="table-wrap"><table class="data-table t4-only t4-pdt"><thead><tr><th>Vonatnév</th><th class="num">Hónap</th><th class="num">Menetrendszerűség (első → utolsó)</th><th class="num">Trend (százalékpont / hó)</th><th class="num">Foglalás / vonat YoY (első → utolsó)</th><th class="num">YoY trend (százalékpont / hó)</th><th>Értékelés</th></tr></thead><tbody>' +
           (shown.length ? shown.map(function (t) {
-            var verdict = t.sl <= -1 ? (t.ysl !== null && t.ysl < -0.5 ? '<span class="pd-flag pd-bad">Romló pontosság, gyengülő kereslet</span>' : '<span class="pd-flag">Romló pontosság, a kereslet tartja magát</span>') : '<span class="pd-flag pd-mild">Enyhén romló pontosság</span>';
+            var verdict = t.sl <= -1 ? (t.ysl !== null && t.ysl < -0.5 ? '<span class="pd-flag pd-bad">Romló menetrendszerűség, gyengülő kereslet</span>' : '<span class="pd-flag">Romló menetrendszerűség, a kereslet tartja magát</span>') : '<span class="pd-flag pd-mild">Enyhén romló menetrendszerűség</span>';
             return '<tr data-name="' + escHtml(t.name) + '"><td><strong>' + escHtml(t.name) + '</strong></td><td class="num">' + t.n + '</td><td class="num">' + fmtPunctPill(t.p0) + ' → ' + fmtPunctPill(t.p1) + '</td><td class="num"><strong>' + fmtSigned(t.sl, 1) + '</strong></td>' +
               '<td class="num">' + fmtSigned(t.y0, 1, '%') + ' → ' + fmtSigned(t.y1, 1, '%') + '</td><td class="num">' + fmtSigned(t.ysl, 1) + '</td><td>' + verdict + '</td></tr>';
-          }).join('') : '<tr><td colspan="7" class="occ-none" style="padding:14px;">Egyik vonatnévnél sem romlik tartósan a pontosság (trend −0,5 százalékpont / hó alatt).</td></tr>') + '</tbody></table></div>' +
+          }).join('') : '<tr><td colspan="7" class="occ-none" style="padding:14px;">Egyik vonatnévnél sem romlik tartósan a menetrendszerűség (trend −0,5 százalékpont / hó alatt).</td></tr>') + '</tbody></table></div>' +
           '<div class="fc-small">Trend: lineáris illesztés a betöltött hónapokra (legalább 3 hónap, legalább 1 000 foglalás). „Gyengülő kereslet”: a foglalás / vonat előző évhez mért változása is csökkenő trendű. Kattints egy sorra a havi bontásért.</div>';
       }
       host.innerHTML = h;
@@ -10108,7 +10108,7 @@
     }
 
     function pdScatter(el, pts, netX, netY, slope, sel) {
-      if (!pts.length) { el.innerHTML = '<div class="empty-state" style="padding:24px;">Nincs olyan vonatnév, amelynek a pontossága és az előző évi foglalása is ismert.</div>'; return; }
+      if (!pts.length) { el.innerHTML = '<div class="empty-state" style="padding:24px;">Nincs olyan vonatnév, amelynek a menetrendszerűsége és az előző évi foglalása is ismert.</div>'; return; }
       var W = Math.max(560, el.clientWidth || 900), H = 380, m = { l: 58, r: 20, t: 16, b: 46 };
       var xs = pts.map(function (q) { return q.x; }), ys = pts.map(function (q) { return Math.max(-60, Math.min(60, q.y)); });
       var x0 = Math.min.apply(null, xs), y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
@@ -10120,7 +10120,7 @@
       var g = '';
       for (var y = y0; y <= y1 + 1e-9; y += sy) g += '<line x1="' + m.l + '" x2="' + (W - m.r) + '" y1="' + Y(y) + '" y2="' + Y(y) + '" stroke="' + (Math.abs(y) < 1e-9 ? '#94a3b8' : '#e2e8f0') + '" stroke-width="1"/><text x="' + (m.l - 8) + '" y="' + (Y(y) + 4) + '" text-anchor="end" font-size="11" fill="#64748b">' + fmtSigned(y, 0, '%').replace('±0%', '0%') + '</text>';
       for (var x = x0; x <= x1 + 1e-9; x += sx) g += '<line x1="' + X(x) + '" x2="' + X(x) + '" y1="' + m.t + '" y2="' + (H - m.b) + '" stroke="#f1f5f9"/><text x="' + X(x) + '" y="' + (H - m.b + 16) + '" text-anchor="middle" font-size="11" fill="#64748b">' + fmtDec(x, 0) + '%</text>';
-      g += '<text x="' + ((m.l + W - m.r) / 2) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="11.5" fill="#475569">Pontosság (utasszámmal súlyozva)</text>' +
+      g += '<text x="' + ((m.l + W - m.r) / 2) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="11.5" fill="#475569">Menetrendszerűség (utasszámmal súlyozva)</text>' +
         '<text transform="translate(14,' + ((m.t + H - m.b) / 2) + ') rotate(-90)" text-anchor="middle" font-size="11.5" fill="#475569">Foglalás / vonat, előző évhez</text>';
       if (netX !== null) g += '<line x1="' + X(netX) + '" x2="' + X(netX) + '" y1="' + m.t + '" y2="' + (H - m.b) + '" stroke="#475569" stroke-dasharray="5 4"/><text x="' + (X(netX) + 4) + '" y="' + (m.t + 10) + '" font-size="11" fill="#334155">hálózat ' + fmtDec(netX, 1) + '%</text>';
       if (netY !== null) g += '<line x1="' + m.l + '" x2="' + (W - m.r) + '" y1="' + Y(netY) + '" y2="' + Y(netY) + '" stroke="#475569" stroke-dasharray="5 4"/><text x="' + (W - m.r - 4) + '" y="' + (Y(netY) - 5) + '" text-anchor="end" font-size="11" fill="#334155">hálózat ' + fmtSigned(netY, 1, '%') + '</text>';
@@ -10145,14 +10145,14 @@
         labels += '<text x="' + tx.toFixed(1) + '" y="' + ty.toFixed(1) + '" font-size="11" font-weight="' + (q.name === sel ? 700 : 600) + '" fill="#0f172a" stroke="#ffffff" stroke-width="3" paint-order="stroke">' + escHtml(q.name) + '</text>';
       });
       el.innerHTML = '<svg class="chart-svg" viewBox="0 0 ' + W + ' ' + H + '" width="100%" height="' + H + '" xmlns="http://www.w3.org/2000/svg">' + g + dots + '<g pointer-events="none">' + labels + '</g></svg>';
-      el._xlsx = { title: 'Pontosság és keresletváltozás vonatnév szerint', head: ['Vonatnév', 'Pontosság', 'Foglalás / vonat YoY', 'Foglalás (időszak)', 'Ø foglalt / vonat', 'Ø foglalt / vonat előző év'],
+      el._xlsx = { title: 'Menetrendszerűség és keresletváltozás vonatnév szerint', head: ['Vonatnév', 'Menetrendszerűség', 'Foglalás / vonat YoY', 'Foglalás (időszak)', 'Ø foglalt / vonat', 'Ø foglalt / vonat előző év'],
         rows: pts.slice().sort(function (a, b) { return a.x - b.x; }).map(function (q) { return [q.name, { v: q.x / 100, pct: true }, { v: q.y / 100, pct: true }, Math.round(q.bk), Math.round(q.bpr), Math.round(q.bpr0)]; }) };
       var tip = document.getElementById('floating-tooltip');
       el.querySelectorAll('.pd-dot').forEach(function (c) {
         var q = pts[parseInt(c.dataset.i, 10)];
         c.addEventListener('mousemove', function (ev) {
           tip.innerHTML = '<div class="tt-title">' + escHtml(q.name) + '</div>' +
-            '<div class="tt-row"><div class="tt-left"><span class="tt-name">Pontosság</span></div><div class="tt-val">' + fmtPct(q.x, 1) + '</div></div>' +
+            '<div class="tt-row"><div class="tt-left"><span class="tt-name">Menetrendszerűség</span></div><div class="tt-val">' + fmtPct(q.x, 1) + '</div></div>' +
             '<div class="tt-row"><div class="tt-left"><span class="tt-name">Foglalás / vonat, előző évhez</span></div><div class="tt-val">' + fmtSigned(q.y, 1, '%') + '</div></div>' +
             '<div class="tt-sub">Ø ' + fmtInt(q.bpr) + ' foglalt / vonat (előző év: ' + fmtInt(q.bpr0) + ') • ' + fmtInt(q.bk) + ' foglalás • kattints a havi bontásért</div>';
           tip.classList.add('visible');
@@ -10163,7 +10163,7 @@
       });
     }
 
-    // Két, közös időtengelyű grafikon: fent pontosság, lent a foglalás / vonat előző évhez mért változása
+    // Két, közös időtengelyű grafikon: fent menetrendszerűség, lent a foglalás / vonat előző évhez mért változása
     function pdLines(el, M, name) {
       var e = M.names.get(name);
       if (!e) { el.innerHTML = ''; return; }
@@ -10185,7 +10185,7 @@
       var sy = niceStepV(Math.max(4, yb - ya), 4); ya = Math.floor(ya / sy) * sy; yb = Math.ceil(yb / sy) * sy;
       var top2 = H1 + gap;
       var Y2 = function (v) { return top2 + 12 + (yb - Math.max(-60, Math.min(60, v))) / (yb - ya) * (H2 - 12 - 28); };
-      var g = '<text x="' + m.l + '" y="10" font-size="12" font-weight="700" fill="#0b2e59">Pontosság – ' + escHtml(name) + '</text>';
+      var g = '<text x="' + m.l + '" y="10" font-size="12" font-weight="700" fill="#0b2e59">Menetrendszerűség – ' + escHtml(name) + '</text>';
       for (var p = p0; p <= 100 + 1e-9; p += sp) g += '<line x1="' + m.l + '" x2="' + (W - m.r) + '" y1="' + Y1(p) + '" y2="' + Y1(p) + '" stroke="#e2e8f0"/><text x="' + (m.l - 8) + '" y="' + (Y1(p) + 4) + '" text-anchor="end" font-size="11" fill="#64748b">' + fmtDec(p, 0) + '%</text>';
       var line = function (vals, Yf, col, dash, w) {
         var d = '', pen = false;
@@ -10211,13 +10211,13 @@
       months.forEach(function (mm, i) { hits += '<rect class="pd-col" data-i="' + i + '" x="' + (X(i) - bw / 2).toFixed(1) + '" y="0" width="' + bw.toFixed(1) + '" height="' + (top2 + H2 - 22) + '" fill="transparent"/>'; });
       var Htot = top2 + H2;
       el.innerHTML = '<svg class="chart-svg" viewBox="0 0 ' + W + ' ' + Htot + '" width="100%" height="' + Htot + '" xmlns="http://www.w3.org/2000/svg">' + g + hits + '</svg>' +
-        '<div class="pd-legend"><span><i style="background:#2a78d6"></i>' + escHtml(name) + '</span><span><i class="dash"></i>Teljes hálózat (helyjegyes vonatok)</span>' + (M.pms.length < 3 ? '<span class="fc-small">Pontossági adat csak ' + M.pms.length + ' hónapra van betöltve.</span>' : '') + '</div>';
+        '<div class="pd-legend"><span><i style="background:#2a78d6"></i>' + escHtml(name) + '</span><span><i class="dash"></i>Teljes hálózat (helyjegyes vonatok)</span>' + (M.pms.length < 3 ? '<span class="fc-small">Menetrendszerűségi adat csak ' + M.pms.length + ' hónapra van betöltve.</span>' : '') + '</div>';
       var tip = document.getElementById('floating-tooltip');
       el.querySelectorAll('.pd-col').forEach(function (c) {
         var i = parseInt(c.dataset.i, 10), mm = months[i], yy = bprYoY(e.s, mo, [mm]);
         c.addEventListener('mousemove', function (ev) {
           tip.innerHTML = '<div class="tt-title">' + escHtml(name) + ' – ' + moLabelLong(mm) + '</div>' +
-            '<div class="tt-row"><div class="tt-left"><span class="tt-name">Pontosság</span></div><div class="tt-val">' + (pv[i] === null ? 'nincs adat' : fmtPct(pv[i], 1)) + '</div></div>' +
+            '<div class="tt-row"><div class="tt-left"><span class="tt-name">Menetrendszerűség</span></div><div class="tt-val">' + (pv[i] === null ? 'nincs adat' : fmtPct(pv[i], 1)) + '</div></div>' +
             '<div class="tt-row"><div class="tt-left"><span class="tt-name">Hálózat</span></div><div class="tt-val">' + (pn[i] === null ? '—' : fmtPct(pn[i], 1)) + '</div></div>' +
             '<div class="tt-row"><div class="tt-left"><span class="tt-name">Foglalás / vonat YoY</span></div><div class="tt-val">' + fmtSigned(yv[i], 1, '%') + '</div></div>' +
             '<div class="tt-row"><div class="tt-left"><span class="tt-name">Hálózat YoY</span></div><div class="tt-val">' + fmtSigned(yn[i], 1, '%') + '</div></div>' +
@@ -10405,7 +10405,7 @@
               (bike ? '' : '<div><span>Ø foglalt / vonat</span><strong>' + (st.per === null ? '—' : fmtInt(st.per)) + '</strong><em>' + (st.perPy ? 'előző év: ' + fmtInt(st.perPy) : '') + '</em></div>') +
               '<div><span>' + (bike ? 'Változás előző évhez' : 'Foglalás / vonat, előző évhez') + '</span><strong class="' + (st.yoy === null ? '' : st.yoy < 0 ? 'wl-neg' : 'wl-pos') + '">' + fmtSigned(st.yoy, 1, '%') + '</strong></div>' +
               (bike ? '' : '<div><span>Kihasználtság</span><strong>' + (st.occ === null ? '—' : fmtPct(st.occ, 1)) + '</strong><em>' + (st.occPy !== null ? 'előző év: ' + fmtPct(st.occPy, 1) : '') + '</em></div>') +
-              (pv !== null ? '<div><span>Pontosság – ' + moLabelLong(punctM) + '</span><strong>' + fmtPct(pv, 1) + '</strong></div>' : '') + '</div>';
+              (pv !== null ? '<div><span>Menetrendszerűség – ' + moLabelLong(punctM) + '</span><strong>' + fmtPct(pv, 1) + '</strong></div>' : '') + '</div>';
             if (it.from) {
               kp += '<div class="wl-effect">' + (st.before !== undefined && st.after !== undefined && st.after !== null && st.before !== null
                 ? '<strong>Döntés előtt és után</strong> (' + (bike ? 'jegyek' : 'foglalás / vonat') + ', előző évhez mérve): ' + st.nb + ' hónap átlaga <b>' + fmtSigned(st.before, 1, '%') + '</b> → ' + st.na + ' hónap átlaga <b>' + fmtSigned(st.after, 1, '%') + '</b>, különbség <b class="' + (st.after - st.before < 0 ? 'wl-neg' : 'wl-pos') + '">' + fmtSigned(st.after - st.before, 1, ' százalékpont') + '</b>'
@@ -10421,7 +10421,7 @@
           sumRows.push('<tr><td>' + WL_TYPES[it.type] + '</td><td><strong>' + escHtml(lbl) + '</strong></td><td>' + escHtml(it.note || '') + '</td><td>' + (it.from ? moLabelLong(it.from) : '') + '</td><td>' + (st ? moLabelLong(st.lm) : '') + '</td><td class="num">' + (st ? fmtInt(st.bk) : '') + '</td><td class="num">' + (st && st.bkPy ? fmtInt(st.bkPy) : '') + '</td><td class="num">' + (st ? fmtSigned(st.yoy, 1, '%') : '') + '</td><td class="num">' + (st && st.occ !== null ? fmtPct(st.occ, 1) : '') + '</td><td class="num">' + (st && st.before !== undefined && st.before !== null ? fmtSigned(st.before, 1, '%') : '') + '</td><td class="num">' + (st && st.after !== undefined && st.after !== null ? fmtSigned(st.after, 1, '%') : '') + '</td><td class="num">' + (pv !== null ? fmtPct(pv, 1) : '') + '</td></tr>');
         });
         host.innerHTML = '<div class="wl-grid">' + cards + '</div>' +
-          '<div class="card" style="margin-top:16px;"><h3 class="t4-h3" style="margin-top:0;">Összesítő</h3><div id="wl-summary" class="table-wrap"><table class="data-table"><thead><tr><th>Típus</th><th>Tétel</th><th>Döntés / megjegyzés</th><th>Hatályos</th><th>Utolsó hónap</th><th class="num">Foglalás / jegy</th><th class="num">Előző év</th><th class="num">Változás (/ vonat)</th><th class="num">Kihasználtság</th><th class="num">Döntés előtt (YoY)</th><th class="num">Döntés után (YoY)</th><th class="num">Pontosság</th></tr></thead><tbody>' + sumRows.join('') + '</tbody></table></div></div>';
+          '<div class="card" style="margin-top:16px;"><h3 class="t4-h3" style="margin-top:0;">Összesítő</h3><div id="wl-summary" class="table-wrap"><table class="data-table"><thead><tr><th>Típus</th><th>Tétel</th><th>Döntés / megjegyzés</th><th>Hatályos</th><th>Utolsó hónap</th><th class="num">Foglalás / jegy</th><th class="num">Előző év</th><th class="num">Változás (/ vonat)</th><th class="num">Kihasználtság</th><th class="num">Döntés előtt (YoY)</th><th class="num">Döntés után (YoY)</th><th class="num">Menetrendszerűség</th></tr></thead><tbody>' + sumRows.join('') + '</tbody></table></div></div>';
       }
       // események
       if (can) {
@@ -10599,7 +10599,7 @@
       }
       var netOcc = nC ? nB / nC : null, netBpr = nRn ? nB / nRn : null, netBprPy = nRy ? nBy / nRy : null, netBz = np ? 100 * nt / np : null;
       var pms = months.map(moPrev);
-      // pontosság
+      // menetrendszerűség
       var pun = null;
       if (state.punct) {
         var nn = numNameMap(), pm = punctMonths().slice().reverse().filter(function (m) { return mSet[m]; });
@@ -10649,7 +10649,7 @@
       var art = function (c) { return (c.k === '1' ? 'Az ' : 'A ') + lc(c); };
       var clsTxt = function (c) { return lc(c) + ' ' + anPct(100 * c.occ) + (c.occPy !== null ? ' (előző év ' + anPct(100 * c.occPy) + ')' : ''); };
       var hkO = hybKind(A.name);
-      T.occ = (hkO === 'always' ? '<b>Hibrid InterCity:</b> nem helyjegyköteles, a helyjegy nélkül utazók nem látszanak, így a valós kihasználtság nagyobb az itt kimutatottnál. ' : hkO === 'off' ? '<b>A balatoni szezonon kívül hibrid InterCity:</b> ilyenkor nem helyjegyköteles, ezért a szezonon kívüli hónapokban a valós kihasználtság nagyobb lehet a kimutatottnál. ' : '') +
+      T.occ = (hkO === 'always' ? '<b>Hibrid InterCity:</b> a foglaltsági adatok csak az IC vonatrészre vonatkoznak; a nem helyjegyköteles vonatrészen utazók nem látszanak, így a valós kihasználtság nagyobb az itt kimutatottnál. ' : hkO === 'off' ? '<b>A balatoni szezonon kívül hibrid InterCity:</b> ilyenkor a foglaltsági adatok csak az IC vonatrészre vonatkoznak, ezért a szezonon kívüli hónapokban a valós kihasználtság nagyobb lehet a kimutatottnál. ' : '') +
         'Az ülőhely-kihasználtság (1., 2. osztály' + (seatC.some(function (c) { return c.k === 'p'; }) ? ' és prémium' : '') + ' együtt) ' + anPct(100 * A.occ) + (A.net.occ !== null ? ', a hálózati átlag (' + anPct(100 * A.net.occ) + ') ' + (A.occ > A.net.occ + 0.02 ? 'fölött' : (A.occ < A.net.occ - 0.02 ? 'alatt' : 'szintjén')) : '') + '. ' +
         (seatC.length ? 'Kocsiosztályonként: ' + seatC.map(clsTxt).join(', ') + '. ' : '') +
         seatC.filter(function (c) { return c.runs && c.full / c.runs >= 0.05; }).map(function (c) { return art(c) + ' a közlekedések ' + anPct(100 * c.full / c.runs, 0) + '-ában legalább 90%-ig megtelt. '; }).join('') +
@@ -10697,7 +10697,7 @@
       if (hot.length) sum.push({ w: 8 + hot.length, t: 'Telítettség: ' + hot.length + ' vonatszám rendszeresen 90% fölött (pl. ' + tdesc(hot[0]) + ').' });
       var hk = hybKind(A.name);
       if (hk === 'always') {
-        if (cold.length) rec.push({ w: 4, t: 'Alacsony kimutatott kihasználtság (pl. ' + tdesc(cold[0]) + ', Ø ' + anPct(100 * cold[0].occ, 0) + '), de a ' + escHtml(A.name) + ' hibrid InterCity: a helyjegy nélkül utazók nem látszanak, ezért kapacitás-csökkentést csak utasszámlálás vagy jegyeladási adat alapján érdemes vizsgálni.' });
+        if (cold.length) rec.push({ w: 4, t: 'Alacsony kimutatott kihasználtság (pl. ' + tdesc(cold[0]) + ', Ø ' + anPct(100 * cold[0].occ, 0) + '), de a ' + escHtml(A.name) + ' hibrid InterCity: az adat csak az IC vonatrészre vonatkozik, a többi vonatrészen utazók nem látszanak, ezért kapacitás-csökkentést csak utasszámlálás vagy jegyeladási adat alapján érdemes vizsgálni.' });
       } else cold.slice(0, 2).forEach(function (t) { rec.push({ w: 6, t: 'Kapacitás-csökkentés vizsgálata: ' + tdesc(t) + ' ' + t.routeStr + ' – Ø ' + anPct(100 * t.occ, 0) + ' kihasználtság ' + fmtInt(t.runs) + ' közlekedésen' + (hk === 'off' ? ' (a balatoni szezonon kívül hibrid IC: a valós foglaltság nagyobb lehet, a szezonon kívüli napokat utasszámlálással érdemes ellenőrizni)' : '') + '.' }); });
       if (A.shift / A.runs >= 0.2) rec.push({ w: 9, t: 'Osztályok közti eltolódás: a közlekedések ' + anPct(100 * A.shift / A.runs, 0) + '-ában telt 2. és félig üres 1. osztály – deklasszálás vagy 1. osztályú upgrade-akció.' });
       // csúcsnapok
@@ -10713,13 +10713,13 @@
         T.bz = 'A bisztrókocsiban 100 foglalt utasra ' + fmtDec(A.bz.pen, 1) + ' tranzakció jutott' + (A.bz.net !== null ? ' (hálózati átlag: ' + fmtDec(A.bz.net, 1) + ')' : '') + ', összesen ' + fmtInt(A.bz.tr) + ' tranzakció, ' + fmtInt(A.bz.rev) + ' Ft bevétel (átlagkosár ' + fmtInt(A.bz.rev / A.bz.tr) + ' Ft).';
         if (A.bz.net && A.bz.pen < 0.75 * A.bz.net) rec.push({ w: 5, t: 'Bisztró: a penetráció (' + fmtDec(A.bz.pen, 1) + ' / 100 utas) jóval a hálózati átlag (' + fmtDec(A.bz.net, 1) + ') alatt – kínálat, nyitvatartás, promóció vizsgálata.' });
       }
-      // pontosság
+      // menetrendszerűség
       if (A.pun) {
         T.pun = 'A menetrendszerűség (utassal súlyozva) ' + anPct(A.pun.p) + (A.pun.net !== null ? ', a hálózati ' + anPct(A.pun.net) + ' ' + (A.pun.p < A.pun.net - 3 ? 'alatt' : (A.pun.p > A.pun.net + 3 ? 'fölött' : 'körül')) : '') + ' (' + A.pun.months.length + ' hónap adatából).' +
-          (A.pun.worst ? ' A legpontatlanabb vonat ' + escHtml(A.pun.worst.num) + ' (' + anPct(100 * A.pun.worst.p, 0) + ', ' + moLabelLong(A.pun.worst.m) + ').' : '');
+          (A.pun.worst ? ' A legrosszabb menetrendszerűségű vonat ' + escHtml(A.pun.worst.num) + ' (' + anPct(100 * A.pun.worst.p, 0) + ', ' + moLabelLong(A.pun.worst.m) + ').' : '');
         if (A.pun.net !== null && A.pun.p < A.pun.net - 10) {
-          rec.push({ w: 8, t: 'Pontosság: ' + anPct(A.pun.p, 0) + ' a hálózati ' + anPct(A.pun.net, 0) + ' helyett' + (yoy !== null && netYoy !== null && yoy < netYoy ? ', és a kereslet is gyengébb a hálózatnál – pályás vagy menetrendi beavatkozás indokolt' : '') + '.' });
-          sum.push({ w: 7, t: 'Pontosság: ' + anPct(A.pun.p, 0) + ' (hálózat: ' + anPct(A.pun.net, 0) + ').' });
+          rec.push({ w: 8, t: 'Menetrendszerűség: ' + anPct(A.pun.p, 0) + ' a hálózati ' + anPct(A.pun.net, 0) + ' helyett' + (yoy !== null && netYoy !== null && yoy < netYoy ? ', és a kereslet is gyengébb a hálózatnál – pályás vagy menetrendi beavatkozás indokolt' : '') + '.' });
+          sum.push({ w: 7, t: 'Menetrendszerűség: ' + anPct(A.pun.p, 0) + ' (hálózat: ' + anPct(A.pun.net, 0) + ').' });
         }
       }
       if (yoy !== null && yoy < -10) rec.push({ w: 9, t: 'Keresletcsökkenés: vonatonként ' + anChg(yoy) + ' – okok vizsgálata (menetrend, pótlás, versenytárs, ár).' });
@@ -10866,7 +10866,7 @@
           '<div><span>Közlekedés / vonatszám</span><strong>' + fmtInt(A.runs) + '</strong><em>' + A.trains.length + ' vonatszám</em></div>' +
           A.cls.filter(function (c) { return c.k === 'p' || !c.seat; }).map(function (c) { return '<div><span>' + c.label + ' kihasználtság</span><strong>' + anPct(100 * c.occ) + '</strong><em>' + (c.occPy !== null ? 'előző év: ' + anPct(100 * c.occPy) : '') + '</em></div>'; }).join('') +
           (A.bz ? '<div><span>Bisztró eladás</span><strong>' + fmtInt(A.bz.tr) + '</strong><em>' + fmtDec(A.bz.pen, 1) + ' / 100 utas' + (A.bz.net !== null ? ' (hálózat ' + fmtDec(A.bz.net, 1) + ')' : '') + ' • ' + (A.bz.rev >= 1e6 ? fmtDec(A.bz.rev / 1e6, 1) + ' M Ft' : fmtInt(A.bz.rev) + ' Ft') + '</em></div>' : '') +
-          (A.pun ? '<div><span>Pontosság</span><strong>' + anPct(A.pun.p) + '</strong><em>' + (A.pun.net !== null ? 'hálózat: ' + anPct(A.pun.net) : '') + '</em></div>' : '') + '</div>';
+          (A.pun ? '<div><span>Menetrendszerűség</span><strong>' + anPct(A.pun.p) + '</strong><em>' + (A.pun.net !== null ? 'hálózat: ' + anPct(A.pun.net) : '') + '</em></div>' : '') + '</div>';
         var h = '<div class="an-head"><div class="an-kicker">Vonatnév-elemzés</div><h2>' + escHtml(A.name) + hybBadge(A.name) + '</h2><div class="an-sub">' + T.per + ' • összevetés: előző év ' + (A.short ? 'azonos hétnapjai' : 'azonos hónapjai') + ' • készült: ' + todayHu() + '</div></div>' + kp;
         h += hybNote([A.name], false);
         h += '<section class="an-sec an-sum"><h3>Összefoglaló</h3><ul>' + T.sum.map(function (s) { return '<li>' + s + '</li>'; }).join('') + '</ul></section>';
@@ -10878,7 +10878,7 @@
         if (balNames().indexOf(A.name) >= 0) h += balNameSection(A.name);
         if (A.bike) h += anSection('bike', 'Kerékpár', T.bike, A.bike.full ? anSvgBike(A) : '', '');
         if (A.bz) h += anSection('bz', 'Bisztró', T.bz, '', '');
-        if (A.pun) h += anSection('pun', 'Pontosság és kereslet', T.pun, '<div id="an-pun"></div>', '');
+        if (A.pun) h += anSection('pun', 'Menetrendszerűség és kereslet', T.pun, '<div id="an-pun"></div>', '');
         h += '<section class="an-sec an-rec"><h3>Következtetések és javaslatok</h3><ol>' + T.rec.map(function (s) { return '<li>' + s + '</li>'; }).join('') + '</ol>' +
           '<p class="fc-small">Automatikusan, szabályok alapján összeállított elemzés a betöltött adatokból (helyjegyfoglalás, kapacitás, kerékpár, bisztró, menetrendszerűség). Küszöbök: telítettség ≥90%, rendszeres = a közlekedések ≥15%-a, alacsony = Ø &lt;35%. A javaslatok kiindulópontok, nem döntések.</p></section>';
         host.innerHTML = h;
@@ -11261,7 +11261,7 @@
           }).join('') + '</tr>';
         }).join('') + '</tbody></table></div></section>';
       h += '<section class="an-sec an-rec"><h3>Következtetések és javaslatok</h3><ol>' + (tx.rec.length ? tx.rec : ['Nincs beavatkozást igénylő jel a szezonban.']).map(function (s) { return '<li>' + s + '</li>'; }).join('') + '</ol>' +
-        '<p class="fc-small">Balatoni vonatok: a balatoni végállomású vagy onnan induló helyjegyes vonatok, valamint a déli parton átmenő Budapest / Székesfehérvár – Nagykanizsa, Zágráb vonatok, a kiválasztott vonatnevekkel. Ezeknél a teljes útvonal foglalása számít (a Balatonig utazóké is). Szezonhatárok: a MÁV balatoni elő-, fő- és utószezoni menetrendjének időszakai. Az előző év a 364 nappal korábbi, azonos hétnapokkal szerepel a napi grafikonon. Az adat helyjegyfoglalás: a balatoni vonatokon a helyjegy a szezonban kötelező, ezért a szezonon kívüli napok foglalása (és a korábbi szezonkezdés napjainak előző évi értéke) nem a teljes utasforgalom. A BALATON és a TÓPART a szezonon kívül hibrid InterCity (nem helyjegyköteles), a napi grafikon szezonon kívüli szakasza ezért csak a helyjeggyel utazókat mutatja.</p></section>';
+        '<p class="fc-small">Balatoni vonatok: a balatoni végállomású vagy onnan induló helyjegyes vonatok, valamint a déli parton átmenő Budapest / Székesfehérvár – Nagykanizsa, Zágráb vonatok, a kiválasztott vonatnevekkel. Ezeknél a teljes útvonal foglalása számít (a Balatonig utazóké is). Szezonhatárok: a MÁV balatoni elő-, fő- és utószezoni menetrendjének időszakai. Az előző év a 364 nappal korábbi, azonos hétnapokkal szerepel a napi grafikonon. Az adat helyjegyfoglalás: a balatoni vonatokon a helyjegy a szezonban kötelező, ezért a szezonon kívüli napok foglalása (és a korábbi szezonkezdés napjainak előző évi értéke) nem a teljes utasforgalom. A BALATON és a TÓPART a szezonon kívül hibrid InterCity: ilyenkor a foglaltsági adat csak az IC vonatrészre vonatkozik, a napi grafikon szezonon kívüli szakasza ezért nem a teljes utasforgalom.</p></section>';
       host.innerHTML = h;
       bindBsCtl(ctl, bs, allNames);
       document.getElementById('bs-print').addEventListener('click', function () { docPrint(); });
@@ -11300,8 +11300,8 @@
        ========================================================================= */
     var HYB_ALWAYS = ['NAPFÉNY', 'KRESZ GÉZA', 'SOMOGY', 'RIPPL-RÓNAI', 'BAKONY', 'GÖCSEJ', 'BÉKÉS'];
     var HYB_OFFSEASON = ['BALATON', 'TÓPART'];   // a balatoni elő-, fő- és utószezonon kívül
-    var HYB_TIP = 'Hibrid InterCity: nem helyjegyköteles, a helyjegy nélkül utazók nem látszanak az adatban, így a valós foglaltság nagyobb lehet.';
-    var HYB_TIP_OFF = 'A balatoni elő-, fő- és utószezonon kívül hibrid InterCity: ilyenkor nem helyjegyköteles, a helyjegy nélkül utazók nem látszanak az adatban, így a valós foglaltság nagyobb lehet.';
+    var HYB_TIP = 'Hibrid InterCity: a foglaltsági adatok csak az IC vonatrészre vonatkoznak. A vonat nem helyjegyköteles részén utazók nem látszanak az adatban, így a valós foglaltság nagyobb lehet.';
+    var HYB_TIP_OFF = 'A balatoni elő-, fő- és utószezonon kívül hibrid InterCity: ilyenkor a foglaltsági adatok csak az IC vonatrészre vonatkoznak, a nem helyjegyköteles részen utazók nem látszanak, így a valós foglaltság nagyobb lehet.';
     function hybKind(name) {
       var n = String(name || '').trim().toUpperCase();
       return HYB_ALWAYS.indexOf(n) >= 0 ? 'always' : (HYB_OFFSEASON.indexOf(n) >= 0 ? 'off' : null);
@@ -11321,9 +11321,9 @@
       names.forEach(function (n) { var k = hybKind(n); if (k === 'always' && al.indexOf(n) < 0) al.push(n); if (k === 'off' && off.indexOf(n) < 0) off.push(n); });
       if (!al.length && !off.length) return '';
       var t = whole
-        ? 'A hálózati adatban hibrid InterCityk is vannak (' + HYB_ALWAYS.join(', ') + '; a ' + HYB_OFFSEASON.join(' és a ') + ' a balatoni szezonon kívül). Ezek nem helyjegykötelesek, a helyjegy nélkül utazók nem látszanak, így náluk a valós foglaltság nagyobb lehet.'
-        : (al.length ? al.join(', ') + ': hibrid InterCity' + (al.length > 1 ? 'k' : '') + ' – nem helyjegyköteles' + (al.length > 1 ? 'ek' : '') + ', a helyjegy nélkül utazók nem látszanak, így a valós foglaltság nagyobb lehet. ' : '') +
-          (off.length ? off.join(', ') + ': a balatoni elő-, fő- és utószezonon kívül hibrid InterCity – ilyenkor a valós foglaltság nagyobb lehet a kimutatottnál.' : '');
+        ? 'A hálózati adatban hibrid InterCityk is vannak (' + HYB_ALWAYS.join(', ') + '; a ' + HYB_OFFSEASON.join(' és a ') + ' a balatoni szezonon kívül). Náluk a foglaltsági adatok csak az IC vonatrészre vonatkoznak; a nem helyjegyköteles vonatrészen utazók nem látszanak, így a valós foglaltság nagyobb lehet.'
+        : (al.length ? al.join(', ') + ': hibrid InterCity' + (al.length > 1 ? 'k' : '') + ': a foglaltsági adatok csak az IC vonatrészre vonatkoznak; a nem helyjegyköteles vonatrészen utazók nem látszanak, így a valós foglaltság nagyobb lehet. ' : '') +
+          (off.length ? off.join(', ') + ': a balatoni elő-, fő- és utószezonon kívül hibrid InterCity – ilyenkor a foglaltsági adatok csak az IC vonatrészre vonatkoznak, a valós foglaltság nagyobb lehet a kimutatottnál.' : '');
       return '<div class="hyb-note">ⓘ ' + t + '</div>';
     }
 
