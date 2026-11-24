@@ -1463,6 +1463,17 @@
     .sec-user button { background: none; border: 1px solid rgba(255,255,255,.4); color: #fff; border-radius: 6px; padding: 3px 8px; font-size: 12px; cursor: pointer; }
     .sec-user.hidden { display: none; }
 
+    /* Lenyitható blokkok */
+    .card.collapsible > .card-header .card-title { cursor: pointer; user-select: none; display: inline-flex; align-items: center; gap: 6px; }
+    .card.collapsible > .card-header .card-title::before { content: '▾'; display: inline-block; width: 14px; font-size: 12px; color: var(--text-muted); transition: transform 0.15s; }
+    .card.collapsible.is-collapsed > .card-header .card-title::before { transform: rotate(-90deg); }
+    .card.collapsible > .card-header .card-title:hover { color: var(--sky); }
+    .card.is-collapsed > :not(.card-header) { display: none !important; }
+    .card.is-collapsed > .card-header { margin-bottom: 0; }
+    .card.is-collapsed > .card-header > :not(:first-child) { display: none !important; }
+    .card.is-collapsed .card-subtitle { display: none; }
+    #tab4 .t4-pc-search { width: 260px; }
+
     /* Reszponzív töréspontok */
     @media (max-width: 1180px) {
       .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -8987,7 +8998,7 @@
       if (t4.pmode === 'month' && ms.indexOf(t4.month) >= 0 && t4._pcAuto !== t4.month) { t4.pcMonth = t4.month; t4._pcAuto = t4.month; }
       var P = state.punct.months[t4.pcMonth];
       var occM = state.occ && state.occ.rowCount ? occByNumMonth(t4.pcMonth) : new Map();
-      var q = normText(t4.search);
+      var q = normText(t4.search), qq = normText(t4.pcSearch || '');
       var all = Object.keys(P.byNum).map(function (n) {
         var v = P.byNum[n], o = occM.get(n) || null;
         return { num: n, seg: v[0], p: v[1], vtk: v[2], o: o, name: o ? o.name : '', dep: o ? o.dep : -1 };
@@ -9003,19 +9014,26 @@
         if (x.vtk < t4.pcMinVtk) return false;
         if (t4.parity !== 'all' && !parityPass(x.num, t4.parity)) return false;
         if (q && normText(x.num + ' ' + x.name + ' ' + (x.o ? x.o.routeStr : '')).indexOf(q) < 0) return false;
+        if (qq && normText(x.num + ' ' + x.name + ' ' + (x.o ? x.o.routeStr : '')).indexOf(qq) < 0) return false;
         return true;
       }).sort(function (a, b) { return a.p - b.p || b.vtk - a.vtk; });
-      var worst = rows.slice(0, EXPORT_FULL ? Infinity : 25);
+      var worst = rows.slice(0, EXPORT_FULL || qq ? Infinity : 25);
+      var names = [];
+      all.forEach(function (x) { if (x.name && x.name.charAt(0) !== '(' && names.indexOf(x.name) < 0) names.push(x.name); });
+      names.sort(function (a, b) { return a.localeCompare(b, 'hu'); });
       var joinedN = all.filter(function (x) { return x.o; }).length;
       var monthLbl = function (m) { return m.slice(0, 4) + '. ' + MONTHS_FULL[parseInt(m.slice(5), 10) - 1].toLowerCase(); };
       var h = '<div class="t4-subhead" style="margin-bottom:8px;"><div class="bm-ctrl">' +
         '<select id="pc-month" class="select-control" style="width:auto;">' + ms.map(function (m) { return '<option value="' + m + '"' + (m === t4.pcMonth ? ' selected' : '') + '>' + monthLbl(m) + '</option>'; }).join('') + '</select>' +
         '<div id="pc-seg" class="segmented seg-sm">' + [['all', 'Minden szegmens'], ['O', 'O'], ['FO', 'FO'], ['R', 'R'], ['EV', 'EV']].map(function (x) { return '<button class="seg-btn' + (t4.pcSeg === x[0] ? ' active' : '') + '" data-val="' + x[0] + '" type="button">' + x[1] + '</button>'; }).join('') + '</div>' +
+        '<input id="pc-search" class="select-control t4-pc-search" type="search" list="pc-names" placeholder="Vonatnév, vonatszám vagy állomás…" value="' + escHtml(t4.pcSearch || '') + '" autocomplete="off">' +
+        '<datalist id="pc-names">' + names.map(function (n) { return '<option value="' + escHtml(n) + '"></option>'; }).join('') + '</datalist>' +
         '<span class="control-label">Ø utas legalább</span><input id="pc-minvtk" class="select-control t4-thr" type="number" min="0" step="10" value="' + t4.pcMinVtk + '"></div></div>';
       h += '<div class="t4-kpis">' + segs.map(function (s) {
         return '<div><span>' + escHtml(PC_SEG[s.s]) + ' • ' + s.n + ' vonat</span><strong>' + (s.avg === null ? '—' : fmtPct(100 * s.avg, 0)) + '</strong><span style="font-weight:500">utassal súlyozva: ' + (s.wavg === null ? '—' : fmtPct(100 * s.wavg, 0)) + '</span></div>';
       }).join('') + '</div>';
-      h += '<h3 class="t4-h3">' + (EXPORT_FULL ? 'Minden vonat, a legrosszabb menetrendszerűségűtől' : 'A 25 legrosszabb menetrendszerűségű vonat' + (rows.length < 25 ? ' (' + rows.length + ')' : '')) + '</h3>' +
+      h += '<h3 class="t4-h3">' + (qq ? 'Keresés: „' + escHtml(t4.pcSearch.trim()) + '” – ' + rows.length + ' vonat, a legrosszabb menetrendszerűségűtől' :
+        EXPORT_FULL ? 'Minden vonat, a legrosszabb menetrendszerűségűtől' : 'A 25 legrosszabb menetrendszerűségű vonat' + (rows.length < 25 ? ' (' + rows.length + ')' : '')) + '</h3>' +
         '<div class="table-wrap"><table class="data-table t4-pc"><thead><tr><th class="num">#</th><th>Vonat</th><th>Szegmens</th><th class="num">' + escHtml(P.label.replace(/\s*%$/, '')) + '</th><th class="num">Ø utas (VTK)</th><th>Reláció</th><th>Vonatnem</th><th class="num">Közl. nap</th><th class="num">Ø kihaszn. (helyjegy)</th><th class="num">Ø foglalt / vonat</th><th class="num">Kerékpárhely tele (nap)</th><th class="num">Bisztró tr. / 100 utas</th></tr></thead><tbody>';
       worst.forEach(function (x, i) {
         var o = x.o;
@@ -9032,19 +9050,31 @@
       all.forEach(function (x) {
         if (!x.o || x.p === null || x.vtk <= 0) return;
         if (t4.pcSeg !== 'all' && x.seg !== t4.pcSeg) return;
+        if (qq && normText(x.name).indexOf(qq) < 0) return;
         var e = byName.get(x.name);
         if (!e) { e = { name: x.name, n: 0, w: 0, pw: 0, worst: null }; byName.set(x.name, e); }
         e.n++; e.w += x.vtk; e.pw += x.p * x.vtk;
         if (!e.worst || x.p < e.worst.p) e.worst = x;
       });
-      var nm = Array.from(byName.values()).filter(function (e) { return e.n >= 2 && e.name.charAt(0) !== '('; }).map(function (e) { e.avg = e.pw / e.w; return e; }).sort(function (a, b) { return a.avg - b.avg; }).slice(0, EXPORT_FULL ? Infinity : 10);
+      var nm = Array.from(byName.values()).filter(function (e) { return (qq || e.n >= 2) && e.name.charAt(0) !== '('; }).map(function (e) { e.avg = e.pw / e.w; return e; }).sort(function (a, b) { return a.avg - b.avg; }).slice(0, EXPORT_FULL || qq ? Infinity : 10);
       if (nm.length) {
-        h += '<h3 class="t4-h3">Vonatnév szerint a 10 legrosszabb (utasszámmal súlyozva, legalább 2 vonat)</h3><div class="table-wrap"><table class="data-table t4-only t4-pcn"><thead><tr><th>Vonatnév</th><th class="num">Vonat</th><th class="num">Pontosság (súlyozott)</th><th>Legrosszabb vonat</th></tr></thead><tbody>' +
+        h += '<h3 class="t4-h3">' + (qq ? 'A keresésnek megfelelő vonatnevek (utasszámmal súlyozva)' : 'Vonatnév szerint a 10 legrosszabb (utasszámmal súlyozva, legalább 2 vonat)') + '</h3><div class="table-wrap"><table class="data-table t4-only t4-pcn"><thead><tr><th>Vonatnév</th><th class="num">Vonat</th><th class="num">Pontosság (súlyozott)</th><th>Legrosszabb vonat</th></tr></thead><tbody>' +
           nm.map(function (e) { return '<tr><td><strong>' + escHtml(e.name) + '</strong></td><td class="num">' + e.n + '</td><td class="num">' + fmtPunctPill(100 * e.avg) + '</td><td>' + escHtml(e.worst.num) + ' (' + fmtPct(100 * e.worst.p, 0) + ')</td></tr>'; }).join('') + '</tbody></table></div>';
       }
       h += '<div class="fc-small" style="margin-top:6px;">Forrás: menetrendszerűségi kimutatás, ' + escHtml(monthLbl(t4.pcMonth)) + ' („' + escHtml(P.label) + '”, VTK = átlagos utasszám; a szegmenskódok a forrás szerint). Vonatszám szerint ' + fmtInt(joinedN) + ' vonat köthető a helyjegyes járati adathoz; a többinél (pl. elővárosi, regionális, nemzetközi számozású vonatok) csak a pontosság látszik. Az alacsony utasszámú vonatokat az „Ø utas legalább” szűrő zárja ki.</div>';
       host.innerHTML = h;
       document.getElementById('pc-month').addEventListener('change', function (e) { t4.pcMonth = e.target.value; renderPunct(); });
+      var ps = document.getElementById('pc-search'), psT = null;
+      ps.addEventListener('input', function () {
+        window.clearTimeout(psT);
+        psT = window.setTimeout(function () {
+          t4.pcSearch = ps.value;
+          renderPunct();
+          var el = document.getElementById('pc-search');
+          el.focus();
+          el.setSelectionRange(el.value.length, el.value.length);
+        }, 250);
+      });
       document.getElementById('pc-seg').addEventListener('click', function (e) { var b = e.target.closest('.seg-btn'); if (!b) return; t4.pcSeg = b.dataset.val; renderPunct(); });
       document.getElementById('pc-minvtk').addEventListener('change', function (e) { var v = parseFloat(e.target.value); t4.pcMinVtk = Number.isFinite(v) && v >= 0 ? v : 0; renderPunct(); });
     }
@@ -9693,6 +9723,50 @@
       renderCloudBadge();
     }
     /* =========================================================================
+       LENYITHATÓ BLOKKOK – a kártya címére kattintva becsukható / kinyitható,
+       az állapotot a böngésző megjegyzi
+       ========================================================================= */
+    function colKey(card) {
+      var t = card.querySelector(':scope > .card-header .card-title');
+      return 'riport-col:' + (card.id || (t && t.id) || (t ? t.textContent.trim().slice(0, 60) : ''));
+    }
+    function colGet(k) { try { return localStorage.getItem(k) === '1'; } catch (e) { return false; } }
+    function colSet(k, v) { try { if (v) localStorage.setItem(k, '1'); else localStorage.removeItem(k); } catch (e) { /* nincs tárhely */ } }
+    function colRerender() {
+      if (state.activeTab === 'tab3') renderTab3();
+      else window.dispatchEvent(new Event('resize'));
+    }
+    function setCollapsed(card, on, quiet) {
+      card.classList.toggle('is-collapsed', on);
+      var t = card.querySelector(':scope > .card-header .card-title');
+      if (t) t.setAttribute('aria-expanded', on ? 'false' : 'true');
+      if (!quiet) { colSet(card._colKey, on); if (!on) colRerender(); }
+    }
+    function setupCollapsibles() {
+      document.querySelectorAll('.card:not(.controls-bar)').forEach(function (card) {
+        var t = card.querySelector(':scope > .card-header .card-title');
+        if (!t || card._colKey) return;
+        card._colKey = colKey(card);
+        card.classList.add('collapsible');
+        t.setAttribute('role', 'button');
+        t.setAttribute('tabindex', '0');
+        t.title = 'Kattints a blokk becsukásához / kinyitásához';
+        var toggle = function () { setCollapsed(card, !card.classList.contains('is-collapsed')); };
+        t.addEventListener('click', toggle);
+        t.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+        setCollapsed(card, colGet(card._colKey), true);
+      });
+    }
+    // Exportnál minden blokk legyen nyitva (a rejtett grafikon nem rajzolható), utána vissza
+    async function runExportOpenAll() {
+      var closed = Array.from(document.querySelectorAll('.card.is-collapsed'));
+      closed.forEach(function (c) { setCollapsed(c, false, true); });
+      if (closed.length) { colRerender(); await new Promise(function (r) { window.setTimeout(r, 160); }); }
+      try { await runExport(); }
+      finally { closed.forEach(function (c) { setCollapsed(c, true, true); }); }
+    }
+
+    /* =========================================================================
        TELJES FRISSÍTÉS ÉS ESEMÉNYKEZELŐK
        ========================================================================= */
     function updateMetaAndHeader() {
@@ -10248,7 +10322,8 @@
         else exportState.sel.delete(k);
         renderExportModal();
       });
-      document.getElementById('btn-run-export').addEventListener('click', runExport);
+      document.getElementById('btn-run-export').addEventListener('click', runExportOpenAll);
+      setupCollapsibles();
 
       // Átméretezéskor SVG grafikonok újraillesztése
       var rTimer = null;
