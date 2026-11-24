@@ -90,3 +90,8 @@ Kiválasztott vonatnévre és időszakra (utolsó 12 / 3 hónap, naptári év) a
 - Szezononkénti táblázat (foglalás/nap, foglalás/vonat, kihasználtság, osztályok, ≥90%-os közlekedés, kerékpár, Balaton24 napijegy havonta – a havi adat a szezonnal átfedő napokkal súlyozva) az előző év azonos szezonjához; napi grafikon (7 napos átlag, előző év azonos hétnapjai); évek összevetése; vonatnevenként; javaslatok. Nyomtatható és PowerPointba menthető.
 - Prémium (foglalás/nap, kihasználtság, ≥90%) és kerékpár (kerékpárhely-foglalás/nap, kihasználtság, megtelt) külön sorokban, grafikonnal és javaslattal; a 2. osztály a prémium nélkül.
 - A vonatnév-elemzésben (6. fül) a balatoni vonatneveknél külön „Balatoni szezon” fejezet.
+
+## Hibrid InterCityk és bisztró-KPI
+
+- Hibrid (nem helyjegyköteles) InterCityk: NAPFÉNY, KRESZ GÉZA, SOMOGY, RIPPL-RÓNAI, BAKONY, GÖCSEJ, BÉKÉS, valamint a balatoni elő-, fő- és utószezonon kívül a BALATON és a TÓPART. Jelölés („hibrid IC”) az 1. fül táblázatában és figyelmeztetés a KPI-k alatt, a 4. fül vonatcelláiban, a vonatnév-elemzésben (a kapacitás-csökkentési javaslat helyett figyelmeztetéssel) és a figyelőlistán. Lista: `HYB_ALWAYS` / `HYB_OFFSEASON` a kódban.
+- 1. fül: külön „Bisztró eladások” KPI-kártya (tranzakció, bevétel, átlagkosár) a szűrésre, ha a bisztró-munkafüzet be van töltve.
