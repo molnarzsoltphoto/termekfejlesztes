@@ -9879,7 +9879,8 @@
     /* =========================================================================
        HAVI IDŐSOROK (járatonként), PONTOSSÁG ÉS KERESLET, FIGYELŐLISTA
        ========================================================================= */
-    // Havi összeg járat-viszonylatonként: [foglalás, kapacitás, közlekedés, kerékpárhely tele]
+    // Havi összeg járat-viszonylatonként: [ülőhely-foglalás, ülőhely-kapacitás, közlekedés, kerékpárhely tele, fekvő+háló foglalás, fekvő+háló kapacitás]
+    var MO_K = 6;
     function occMonthly() {
       var occ = state.occ;
       if (occ._mo) return occ._mo;
@@ -9889,27 +9890,34 @@
       months.forEach(function (m, i) { mIdx[m] = i; });
       var dm = new Int32Array(occ.dates.length);
       occ.dates.forEach(function (d, i) { dm[i] = mIdx[d.slice(0, 7)]; });
-      var nM = months.length, nR = occ.routes.length, A = new Float64Array(nR * nM * 4), R = occ.rowsFlat;
+      var nM = months.length, nR = occ.routes.length, A = new Float64Array(nR * nM * MO_K), R = occ.rowsFlat;
       for (var i = 0; i < occ.rowCount; i++) {
-        var off = i * STRIDE, r = R[off + 1], b = (r * nM + dm[R[off]]) * 4;
+        var off = i * STRIDE, r = R[off + 1], b = (r * nM + dm[R[off]]) * MO_K;
         A[b] += R[off + 3] + R[off + 5] + R[off + 13];
         A[b + 1] += R[off + 2] + R[off + 4] + R[off + 12];
         A[b + 2] += 1;
         if (R[off + 6] > 0 && R[off + 7] >= R[off + 6]) A[b + 3] += 1;
+        A[b + 4] += R[off + 9] + R[off + 11]; A[b + 5] += R[off + 8] + R[off + 10];
       }
       occ._mo = { months: months, mIdx: mIdx, nM: nM, A: A };
       return occ._mo;
     }
     // Útvonal-csoport havi sora: { bk, cap, runs, bikeFull } tömbök a hónapokra
     function moSeries(routeIdx) {
-      var mo = occMonthly(), nM = mo.nM, out = { bk: new Float64Array(nM), cap: new Float64Array(nM), runs: new Float64Array(nM), bike: new Float64Array(nM) };
+      var mo = occMonthly(), nM = mo.nM, out = { bk: new Float64Array(nM), cap: new Float64Array(nM), runs: new Float64Array(nM), bike: new Float64Array(nM), sbk: new Float64Array(nM), scap: new Float64Array(nM) };
       routeIdx.forEach(function (r) {
         for (var m = 0; m < nM; m++) {
-          var b = (r * nM + m) * 4;
-          out.bk[m] += mo.A[b]; out.cap[m] += mo.A[b + 1]; out.runs[m] += mo.A[b + 2]; out.bike[m] += mo.A[b + 3];
+          var b = (r * nM + m) * MO_K;
+          out.bk[m] += mo.A[b]; out.cap[m] += mo.A[b + 1]; out.runs[m] += mo.A[b + 2]; out.bike[m] += mo.A[b + 3]; out.sbk[m] += mo.A[b + 4]; out.scap[m] += mo.A[b + 5];
         }
       });
       return out;
+    }
+    // Ugyanez a fekvő- és hálóhellyel együtt (minden foglalás és férőhely) – a pontosság–kereslet elemzéshez
+    function moSeriesAll(routeIdx) {
+      var s = moSeries(routeIdx);
+      for (var m = 0; m < s.bk.length; m++) { s.bk[m] += s.sbk[m]; s.cap[m] += s.scap[m]; }
+      return s;
     }
     function moPrev(m) { return (parseInt(m.slice(0, 4), 10) - 1) + m.slice(4); }
     function moLabel(m) { return MONTHS_SHORT[parseInt(m.slice(5), 10) - 1] + ' ’' + m.slice(2, 4); }
@@ -9966,8 +9974,8 @@
         e.routes.push(r);
       });
       var allTrainRoutes = routesBy(function (rt, r, inf) { return inf.kind[r] === 1; });
-      var net = { name: 'Teljes hálózat (helyjegyes vonatok)', s: moSeries(allTrainRoutes), p: {} };
-      names.forEach(function (e) { e.s = moSeries(e.routes); e.p = {}; });
+      var net = { name: 'Teljes hálózat (helyjegyes vonatok)', s: moSeriesAll(allTrainRoutes), p: {} };
+      names.forEach(function (e) { e.s = moSeriesAll(e.routes); e.p = {}; });
       pms.forEach(function (m) {
         var by = state.punct.months[m].byNum, acc = new Map(), nw = 0, np = 0;
         Object.keys(by).forEach(function (num) {
@@ -10031,7 +10039,7 @@
         '<div><span>Hálózati foglalás / vonat, előző évhez</span><strong>' + (netY ? fmtSigned(netY.yoy, 1, '%') : '—') + '</strong></div>' +
         '<div><span>Pontosság és keresletváltozás</span><strong style="font-size:15px">' + rTxt + '</strong></div></div>';
       h += '<h3 class="t4-h3">Vonatnevek: pontosság és keresletváltozás</h3><div id="pd-scatter"></div>' +
-        '<div class="fc-small">Pont: vonatnév (legalább 1 000 foglalás az időszakban), mérete a foglalások száma. Vízszintesen az utasszámmal súlyozott pontosság, függőlegesen a foglalás / közlekedő vonat változása az előző év azonos hónapjaihoz képest (ez kiszűri a szezonalitást és a járatszám-változást). Szaggatott vonalak: hálózati érték; ' +
+        '<div class="fc-small">Pont: vonatnév (legalább 1 000 foglalás az időszakban), mérete a foglalások száma. Vízszintesen az utasszámmal súlyozott pontosság, függőlegesen a foglalás / közlekedő vonat változása az előző év azonos hónapjaihoz képest (ez kiszűri a szezonalitást és a járatszám-változást; az éjszakai vonatoknál a fekvő- és hálóhely-foglalással együtt). Szaggatott vonalak: hálózati érték; ' +
         '<span style="color:#b45309;font-weight:700">narancs</span> pont = a hálózatnál pontatlanabb és gyengébb keresletű vonatnév; ±60% fölötti változás a szélen. Folytonos vonal: lineáris illesztés' + (slope !== null ? ' (10 százalékponttal jobb pontosság ≈ ' + fmtSigned(10 * slope, 1, ' százalékpont') + ' a keresletváltozásban)' : '') + '. Ez együttmozgás, nem bizonyított ok-okozat: a pontatlan vonatok gyakran más okból (pályafelújítás, vonatpótlás, kapacitáscsökkentés) is veszítenek utast. Kattints egy pontra a havi bontásért.</div>';
       // tartós romlás
       var trend = [];
@@ -10784,7 +10792,7 @@
       state.occ.routes.forEach(function (rt, r) {
         if (info.kind[r] !== 1 || !rt[1] || rt[1].charAt(0) === '(') return;
         var s = 0;
-        for (var k in last12) s += mo.A[(r * mo.nM + (+k)) * 4];
+        for (var k in last12) s += mo.A[(r * mo.nM + (+k)) * MO_K];
         vol.set(rt[1], (vol.get(rt[1]) || 0) + s);
       });
       var names = Array.from(vol.keys()).sort(function (a, b) { return a.localeCompare(b, 'hu'); });
