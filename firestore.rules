@@ -1,18 +1,44 @@
 rules_version = '2';
-// TEKNO – Firestore szabályok. Firebase konzol → Firestore Database → Rules → beillesztés → Publish.
-// Olvasás: bárki (az Abigél üzleti eset REST-en olvassa a ticketReport-ot; a katalógus nyilvános).
-// Írás: csak bejelentkezett kliens (az index.html névtelenül bejelentkezik; ehhez Authentication → Sign-in method → Anonymous: Enable).
+// TEKNO – Firestore szabályok (2026. november, adatvédelmi átállás).
+// Közzététel: Firebase konzol → Firestore Database → Rules → a teljes tartalom beillesztése → Publish.
+//
+// Hozzáférés: csak e-mail + jelszóval bejelentkezett felhasználó, akinek van dokumentuma az
+// `access` gyűjteményben. A dokumentum azonosítója a felhasználó e-mail-címe kisbetűvel,
+// mezője: role = "admin" | "szerkeszto" | "olvaso".
+//   - olvaso:     TEKNO-katalógus, havi riport, Abigél-összesítő olvasása
+//   - szerkeszto: + katalógus szerkesztése, havi riport feltöltése a szerkesztőből
+//   - admin:      + a hozzáférési lista (access) kezelése
+// A névtelen (anonymous) bejelentkezés semmihez nem ad jogot.
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /services/{id} {
-      allow read: if true;
-      allow write: if request.auth != null;
+    function signedIn() {
+      return request.auth != null && request.auth.token.email is string
+        && request.auth.token.firebase.sign_in_provider != 'anonymous';
     }
+    function accPath() {
+      return /databases/$(database)/documents/access/$(request.auth.token.email.lower());
+    }
+    function member() { return signedIn() && exists(accPath()); }
+    function roleIn(roles) { return member() && get(accPath()).data.role in roles; }
+
+    match /access/{email} {
+      allow read: if signedIn() && (email == request.auth.token.email.lower() || roleIn(['admin']));
+      allow write: if roleIn(['admin']);
+    }
+    // TEKNO szolgáltatás-katalógus (TEKNO index.html és Abigél katalógus-másolata)
+    match /services/{id} {
+      allow read: if member();
+      allow write: if roleIn(['szerkeszto', 'admin']);
+    }
+    // Havi riport: darabolt, tömörített adat (c_<verzió>_<n>), meta, Abigél-összesítő (summary)
+    match /riport/{id} {
+      allow read: if member();
+      allow write: if roleIn(['szerkeszto', 'admin']);
+    }
+    // Régi jegyriport (már nem használt): csak olvasás a tagoknak
     match /ticketReport/{id} {
-      allow read: if true;
-      allow write: if request.auth != null
-        && request.resource.data.keys().hasAll(['sec','y','m','metric','dim','value'])
-        && request.resource.data.value is number;
+      allow read: if member();
+      allow write: if false;
     }
     match /{document=**} { allow read, write: if false; }
   }

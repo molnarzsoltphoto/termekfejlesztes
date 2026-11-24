@@ -1440,6 +1440,23 @@
     #tab4 table.t4-pc { min-width: 1100px; }
     #bm-stage path.bo-hit { cursor: pointer; }
 
+    /* Adatvédelem: belépés, jelszókérő */
+    .sec-gate { position: fixed; inset: 0; z-index: 9000; background: rgba(11, 46, 89, 0.55); display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .sec-gate.hidden, .sec-loading.hidden { display: none; }
+    .sec-card { background: #fff; border-radius: 14px; max-width: 420px; width: 100%; padding: 24px 24px 18px; box-shadow: 0 20px 50px rgba(0,0,0,.25); position: relative; }
+    .sec-card h2 { margin: 0 0 6px; font-size: 18px; color: var(--navy); }
+    .sec-card p { margin: 0 0 14px; font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+    .sec-card label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin: 10px 0 4px; }
+    .sec-card input { width: 100%; box-sizing: border-box; padding: 9px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; }
+    .sec-card .sec-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 16px; }
+    .sec-card .sec-msg { min-height: 18px; margin-top: 10px; font-size: 12.5px; color: #be123c; }
+    .sec-card .sec-x { position: absolute; top: 10px; right: 12px; border: 0; background: none; font-size: 20px; cursor: pointer; color: var(--text-muted); }
+    .sec-card a { font-size: 12.5px; color: var(--navy); }
+    .sec-loading { position: fixed; left: 50%; top: 18px; transform: translateX(-50%); z-index: 9100; background: var(--navy); color: #fff; padding: 8px 16px; border-radius: 999px; font-size: 13px; box-shadow: 0 8px 20px rgba(0,0,0,.2); }
+    .sec-user { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: rgba(255,255,255,.85); }
+    .sec-user button { background: none; border: 1px solid rgba(255,255,255,.4); color: #fff; border-radius: 6px; padding: 3px 8px; font-size: 12px; cursor: pointer; }
+    .sec-user.hidden { display: none; }
+
     /* Reszponzív töréspontok */
     @media (max-width: 1180px) {
       .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1500,10 +1517,13 @@
       </div>
 
       <div class="header-actions">
+        <span id="sec-user" class="sec-user hidden">🔐 <span></span><button id="sec-logout" type="button">Kijelentkezés</button></span>
         <button id="btn-open-export" class="btn btn-header-ghost" type="button">⬇ Export (PowerPoint / PNG)</button>
       <div id="admin-actions" class="header-actions">
         <button id="btn-open-upload" class="btn btn-header-teal" type="button">📂 CSV betöltés</button>
-        <button id="btn-export-html" class="btn btn-header-sky" type="button">💾 Küldhető HTML mentése</button>
+        <button id="btn-cloud-load" class="btn btn-header-teal" type="button" title="A TEKNO-ban tárolt jelenlegi adat betöltése (ehhez jönnek a havi új fájlok)">☁ Betöltés a TEKNO-ból</button>
+        <button id="btn-cloud-upload" class="btn btn-header-teal" type="button" title="Feltöltés a TEKNO-ba: a TEKNO-ban és Abigélben bejelentkezve ez látszik">☁ Feltöltés a TEKNO-ba</button>
+        <button id="btn-export-html" class="btn btn-header-sky" type="button" title="Jelszóval titkosított, önálló HTML-fájl e-mailhez / Teamshez">🔒 Titkosított HTML mentése</button>
       </div>
       </div>
     </div>
@@ -1997,6 +2017,29 @@
       </div>
     </section>
   </main>
+
+  <div id="sec-gate" class="sec-gate hidden" role="dialog" aria-modal="true" aria-labelledby="sec-gate-title">
+    <form id="sec-gate-form" class="sec-card" autocomplete="on">
+      <button id="sec-gate-close" class="sec-x hidden" type="button" aria-label="Bezárás">×</button>
+      <h2 id="sec-gate-title">Bejelentkezés</h2>
+      <p id="sec-gate-text"></p>
+      <div id="sec-email-row"><label for="sec-email">E-mail-cím</label><input id="sec-email" type="email" autocomplete="username"></div>
+      <label for="sec-pw">Jelszó</label><input id="sec-pw" type="password" autocomplete="current-password">
+      <div class="sec-row"><a id="sec-reset" href="#">Elfelejtett jelszó</a><button id="sec-gate-submit" class="btn btn-primary" type="submit">Belépés</button></div>
+      <div id="sec-gate-msg" class="sec-msg" aria-live="polite"></div>
+    </form>
+  </div>
+  <div id="sec-pw-modal" class="sec-gate hidden" role="dialog" aria-modal="true">
+    <form id="sec-pw-form" class="sec-card">
+      <h2>Titkosított HTML mentése</h2>
+      <p>Az adatok erős titkosítással (AES-256) kerülnek a fájlba. Megnyitáskor ezt a jelszót kell megadni. A jelszót külön csatornán küldd (pl. telefonon vagy SMS-ben), ne a fájllal együtt. Elfelejtett jelszóval a fájl nem nyitható meg.</p>
+      <label for="sec-pw1">Jelszó (legalább 10 karakter)</label><input id="sec-pw1" type="password" autocomplete="new-password">
+      <label for="sec-pw2">Jelszó újra</label><input id="sec-pw2" type="password" autocomplete="new-password">
+      <div class="sec-row"><button id="sec-pw-cancel" class="btn btn-outline" type="button">Mégse</button><button class="btn btn-primary" type="submit">Titkosítás és mentés</button></div>
+      <div id="sec-pw-msg" class="sec-msg"></div>
+    </form>
+  </div>
+  <div id="sec-loading" class="sec-loading hidden"><span></span></div>
 
   <footer class="app-footer">
     <span>100% offline interaktív vasúti elemző dashboard • Külső hálózati kapcsolat nélkül fut</span>
@@ -2971,13 +3014,16 @@
 
     async function exportStandaloneHtml() {
       try {
-        showToast('Adatok tömörítése és küldhető HTML készítése...', 'info');
+        if (state.isDemo || !state.occ || !state.occ.rowCount) { showToast('Előbb töltsd be a saját adatokat.', 'warn'); return; }
+        var encPw = await askExportPassword();
+        if (!encPw) return;
+        showToast('Adatok tömörítése és titkosítása…', 'info');
         await new Promise(function (r) { window.setTimeout(r, 25); });
 
         var now = new Date();
         var isoDate = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
 
-        var dataObj = {
+        var dataObjUnused = {
           occ: {
             dates: state.occ.dates,
             routes: state.occ.routes,
@@ -2997,7 +3043,7 @@
           }
         };
 
-        var comp = await compressPayload(dataObj);
+        var comp = await compressPayload(buildExportDataObj());
         var wrapper = {
           readonly: true,
           isDemo: state.isDemo,
@@ -3033,6 +3079,14 @@
           var el = clone.querySelector('#' + id);
           if (el) el.innerHTML = '';
         });
+        clone.querySelectorAll('#tab1 [id], #tab2 [id], #tab3 [id], #tab4 [id]').forEach(function (el) {
+          if (/^(t1|t2|t3|t4|fc|bm|pc)-/.test(el.id) && /(body|stage|table|wrap|list|kpis|summary|legend|insight|bikemap|title|subtitle|sub|note|meta|banner|events|donuts|lbl)$/.test(el.id) && !el.querySelector('input, select, button')) el.innerHTML = '';
+        });
+        clone.querySelectorAll('.dropzone-status').forEach(function (el) { el.textContent = ''; el.classList.add('hidden'); });
+        clone.querySelectorAll('.dropzone.loaded').forEach(function (el) { el.classList.remove('loaded'); });
+        var su = clone.querySelector('#sec-user');
+        if (su) { su.classList.add('hidden'); su.querySelector('span').textContent = ''; }
+        ['sec-gate', 'sec-pw-modal', 'sec-loading'].forEach(function (id) { var el = clone.querySelector('#' + id); if (el) el.classList.add('hidden'); });
         var modal = clone.querySelector('#upload-modal');
         if (modal) modal.classList.add('hidden');
         var exm = clone.querySelector('#export-modal');
@@ -3045,7 +3099,7 @@
         // Beágyazott JSON írása biztonságos unicode-escapeléssel (zéró lezáró tag kockázat)
         var emb = clone.querySelector('#embedded-data');
         if (emb) {
-          emb.textContent = JSON.stringify(wrapper).replace(/</g, '\\u003c');
+          emb.textContent = JSON.stringify(await encryptWrapper(wrapper, encPw)).replace(/</g, '\\u003c');
           // Havi összesítő más alkalmazásoknak (Abigél): külön, tömörítetlen blokk
           var sumEl = clone.querySelector('#riport-summary');
           if (!sumEl) {
@@ -3054,7 +3108,7 @@
             sumEl.id = 'riport-summary';
             emb.parentNode.insertBefore(sumEl, emb.nextSibling);
           }
-          try { sumEl.textContent = JSON.stringify(buildRiportSummary() || {}).replace(/</g, '\\u003c'); } catch (e) { sumEl.textContent = '{}'; }
+          sumEl.textContent = '{}';   // titkosított fájlban nincs nyílt összesítő
         }
 
         var htmlStr = '<!DOCTYPE html>\n' + clone.outerHTML;
@@ -3070,7 +3124,7 @@
         window.setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
 
         var mb = (blob.size / (1024 * 1024)).toFixed(2).replace('.', ',');
-        showToast('Küldhető HTML elmentve (' + mb + ' MB): ' + filename, 'success');
+        showToast('Titkosított HTML elmentve (' + mb + ' MB): ' + filename + '. A jelszót külön csatornán küldd.', 'success');
       } catch (err) {
         showToast('Exportálási hiba: ' + err.message, 'error');
       }
@@ -8944,6 +8998,334 @@
       }
     }
     /* =========================================================================
+       ADATVÉDELEM: bejelentkezés (TEKNO Firebase, REST), felhőből töltés / feltöltés,
+       jelszóval titkosított küldhető HTML (AES-256-GCM, PBKDF2-SHA256)
+       ========================================================================= */
+    var TK_FB = { apiKey: 'AIzaSyCNZTo0ABgE8eZ8KMgfKr4fQsGLW0jT_zA', projectId: 'termekfejlesztes-1ba4e' };
+    var TK_AUTH_KEY = 'tekno-auth-v1';     // közös a TEKNO, a riport és Abigél között (azonos origin)
+    var TK_CHUNK = 900000;                 // Firestore-dokumentum < 1 MiB
+    var TK_ITER = 600000;
+
+    function tkLoad() { try { return JSON.parse(localStorage.getItem(TK_AUTH_KEY) || 'null'); } catch (e) { return null; } }
+    function tkSave(a) { try { localStorage.setItem(TK_AUTH_KEY, JSON.stringify(a)); } catch (e) { /* privát mód */ } }
+    function tkClear() { try { localStorage.removeItem(TK_AUTH_KEY); } catch (e) { /* */ } }
+    function tkErr(code) {
+      var m = {
+        EMAIL_NOT_FOUND: 'Hibás e-mail-cím vagy jelszó.', INVALID_PASSWORD: 'Hibás e-mail-cím vagy jelszó.', INVALID_LOGIN_CREDENTIALS: 'Hibás e-mail-cím vagy jelszó.',
+        USER_DISABLED: 'A fiók le van tiltva.', TOO_MANY_ATTEMPTS_TRY_LATER: 'Túl sok próbálkozás. Próbáld újra néhány perc múlva.',
+        INVALID_EMAIL: 'Érvénytelen e-mail-cím.', MISSING_PASSWORD: 'Add meg a jelszót.', OPERATION_NOT_ALLOWED: 'Az e-mail + jelszó belépés nincs bekapcsolva a Firebase-ben.'
+      };
+      var k = String(code || '').split(' ')[0].split(':')[0];
+      return m[k] || ('Bejelentkezési hiba: ' + code);
+    }
+    async function tkPost(url, body, form) {
+      var r = await fetch(url, { method: 'POST', headers: { 'Content-Type': form ? 'application/x-www-form-urlencoded' : 'application/json' }, body: form ? body : JSON.stringify(body) });
+      var j = await r.json().catch(function () { return {}; });
+      if (!r.ok) throw new Error((j.error && j.error.message) || ('HTTP ' + r.status));
+      return j;
+    }
+    async function tkSignIn(email, pw) {
+      var j = await tkPost('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=' + TK_FB.apiKey, { email: email, password: pw, returnSecureToken: true });
+      var a = { email: j.email, idToken: j.idToken, refreshToken: j.refreshToken, exp: Date.now() + (parseInt(j.expiresIn, 10) || 3600) * 1000 };
+      tkSave(a);
+      return a;
+    }
+    async function tkReset(email) {
+      await tkPost('https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=' + TK_FB.apiKey, { requestType: 'PASSWORD_RESET', email: email });
+    }
+    async function tkToken() {
+      var a = tkLoad();
+      if (!a || !a.refreshToken) return null;
+      if (a.idToken && a.exp - 120000 > Date.now()) return a.idToken;
+      try {
+        var j = await tkPost('https://securetoken.googleapis.com/v1/token?key=' + TK_FB.apiKey, 'grant_type=refresh_token&refresh_token=' + encodeURIComponent(a.refreshToken), true);
+        a.idToken = j.id_token; a.refreshToken = j.refresh_token; a.exp = Date.now() + (parseInt(j.expires_in, 10) || 3600) * 1000;
+        tkSave(a);
+        return a.idToken;
+      } catch (e) { tkClear(); return null; }
+    }
+    function fsUrl(path) { return 'https://firestore.googleapis.com/v1/projects/' + TK_FB.projectId + '/databases/(default)/documents/' + path; }
+    function fsVal(v) {
+      if (typeof v === 'number') return Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
+      if (typeof v === 'boolean') return { booleanValue: v };
+      if (v === null || v === undefined) return { nullValue: null };
+      return { stringValue: String(v) };
+    }
+    function fsPlain(doc) {
+      var o = {};
+      Object.keys((doc && doc.fields) || {}).forEach(function (k) {
+        var f = doc.fields[k];
+        o[k] = 'stringValue' in f ? f.stringValue : ('integerValue' in f ? parseInt(f.integerValue, 10) : ('doubleValue' in f ? f.doubleValue : ('booleanValue' in f ? f.booleanValue : null)));
+      });
+      return o;
+    }
+    async function fsReq(method, path, body) {
+      var tok = await tkToken();
+      if (!tok) { var e0 = new Error('Nincs bejelentkezve.'); e0.code = 401; throw e0; }
+      var r = await fetch(fsUrl(path), { method: method, headers: { 'Authorization': 'Bearer ' + tok, 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+      if (r.status === 404 && method === 'GET') return null;
+      if (!r.ok) {
+        var j = await r.json().catch(function () { return {}; });
+        var e = new Error(r.status === 403 ? 'Nincs jogosultságod ehhez az adathoz. Kérd az adminisztrátort, hogy vegyen fel a hozzáférési listára.' : ((j.error && j.error.message) || ('HTTP ' + r.status)));
+        e.code = r.status;
+        throw e;
+      }
+      return method === 'DELETE' ? null : r.json();
+    }
+    async function fsGet(path) { var d = await fsReq('GET', path); return d ? fsPlain(d) : null; }
+    async function fsSet(path, obj) {
+      var fields = {};
+      Object.keys(obj).forEach(function (k) { fields[k] = fsVal(obj[k]); });
+      return fsReq('PATCH', path, { fields: fields });
+    }
+    async function fsDel(path) { return fsReq('DELETE', path); }
+
+    /* ---- base64 nagy tömbökre ---- */
+    function u8ToB64(u8) {
+      var s = '', CH = 0x8000;
+      for (var i = 0; i < u8.length; i += CH) s += String.fromCharCode.apply(null, u8.subarray(i, i + CH));
+      return btoa(s);
+    }
+    function b64ToU8(b64) {
+      var bin = atob(b64), u8 = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+      return u8;
+    }
+    async function secDeriveKey(pw, salt, iter) {
+      var base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+      return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: salt, iterations: iter, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+    }
+    async function encryptWrapper(wrapper, pw) {
+      if (!window.crypto || !crypto.subtle) throw new Error('A böngésző nem támogatja a titkosítást (WebCrypto).');
+      var salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+      var key = await secDeriveKey(pw, salt, TK_ITER);
+      var ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, key, new TextEncoder().encode(JSON.stringify(wrapper)));
+      return { enc: 'AES-256-GCM', kdf: 'PBKDF2-SHA256', iter: TK_ITER, salt: u8ToB64(salt), iv: u8ToB64(iv), ct: u8ToB64(new Uint8Array(ct)), readonly: true };
+    }
+    async function decryptWrapper(enc, pw) {
+      var key = await secDeriveKey(pw, b64ToU8(enc.salt), enc.iter || TK_ITER);
+      var pt;
+      try { pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64ToU8(enc.iv) }, key, b64ToU8(enc.ct)); }
+      catch (e) { throw new Error('Hibás jelszó.'); }
+      return JSON.parse(new TextDecoder().decode(pt));
+    }
+
+    /* ---- beágyazott vagy letöltött adatcsomag alkalmazása ---- */
+    async function applyWrapper(parsed) {
+      var payload = await decompressPayload(parsed);
+      state.occ = prepareOccModel(payload.occ);
+      state.pass = preparePassModel(payload.pass);
+      ['km', 'bisz', 'dep'].forEach(function (k) { if (payload[k] && payload[k].byNum) state[k] = payload[k]; });
+      ['bikeSales', 'bikeOD', 'punct'].forEach(function (k) { if (payload[k] && payload[k].months) state[k] = payload[k]; });
+      if (payload.settings && payload.settings.fc) Object.assign(state.fc, payload.settings.fc);
+      state.readonly = !!parsed.readonly || state.readonly;
+      if (state.readonly) document.body.setAttribute('data-readonly', 'true');
+      state.isDemo = !!parsed.isDemo;
+      state.exportedAt = parsed.exportedAt || null;
+      if (parsed.subtitle) state.subtitle = parsed.subtitle;
+      renderAll();
+    }
+
+    /* ---- Belépő / jelszókérő ablak ---- */
+    function secGate(mode, opts) {
+      opts = opts || {};
+      var g = document.getElementById('sec-gate');
+      var isPw = mode === 'password';
+      document.getElementById('sec-gate-title').textContent = isPw ? 'A riport jelszóval védett' : (opts.title || 'Bejelentkezés a TEKNO-fiókkal');
+      document.getElementById('sec-gate-text').textContent = isPw
+        ? 'Add meg a jelszót, amelyet a riport küldőjétől kaptál. A jelszó nélkül az adatok nem olvashatók.'
+        : (opts.text || 'A riport adatai csak a hozzáférési listán szereplő munkatársaknak érhetők el. Ugyanazzal a fiókkal lépj be, mint a TEKNO-ba.');
+      document.getElementById('sec-email-row').classList.toggle('hidden', isPw);
+      document.getElementById('sec-reset').classList.toggle('hidden', isPw);
+      document.getElementById('sec-gate-close').classList.toggle('hidden', !opts.closable);
+      document.getElementById('sec-gate-msg').textContent = opts.msg || '';
+      document.getElementById('sec-pw').value = '';
+      var a = tkLoad();
+      if (!isPw && a && a.email) document.getElementById('sec-email').value = a.email;
+      g.classList.remove('hidden');
+      setTimeout(function () { (isPw || document.getElementById('sec-email').value ? document.getElementById('sec-pw') : document.getElementById('sec-email')).focus(); }, 30);
+      return new Promise(function (resolve) {
+        var form = document.getElementById('sec-gate-form');
+        var close = document.getElementById('sec-gate-close');
+        var done = function (v) { form.onsubmit = null; close.onclick = null; g.classList.add('hidden'); resolve(v); };
+        close.onclick = function () { done(null); };
+        form.onsubmit = async function (e) {
+          e.preventDefault();
+          var msg = document.getElementById('sec-gate-msg');
+          var btn = document.getElementById('sec-gate-submit');
+          btn.disabled = true;
+          msg.textContent = isPw ? 'Visszafejtés…' : 'Belépés…';
+          try {
+            var pw = document.getElementById('sec-pw').value;
+            if (isPw) { var w = await opts.onPassword(pw); done(w); }
+            else { await tkSignIn(document.getElementById('sec-email').value.trim(), pw); done(true); }
+          } catch (err) {
+            msg.textContent = isPw ? (err.message || 'Hibás jelszó.') : tkErr(err.message);
+          } finally { btn.disabled = false; }
+        };
+        document.getElementById('sec-reset').onclick = async function (e) {
+          e.preventDefault();
+          var em = document.getElementById('sec-email').value.trim();
+          var msg = document.getElementById('sec-gate-msg');
+          if (!em) { msg.textContent = 'Írd be az e-mail-címedet, és oda küldjük a jelszó-visszaállító levelet.'; return; }
+          try { await tkReset(em); msg.textContent = 'Ha a cím szerepel a rendszerben, elküldtük a jelszó-visszaállító levelet.'; }
+          catch (err) { msg.textContent = tkErr(err.message); }
+        };
+      });
+    }
+
+    async function unlockEncrypted(enc) {
+      var w = await secGate('password', { onPassword: function (pw) { return decryptWrapper(enc, pw); } });
+      if (w) await applyWrapper(w);
+    }
+
+    function secProgress(t) {
+      var el = document.getElementById('sec-loading');
+      if (!t) { el.classList.add('hidden'); return; }
+      el.classList.remove('hidden');
+      el.querySelector('span').textContent = t;
+    }
+
+    async function cloudFetchWrapper() {
+      var meta = await fsGet('riport/meta');
+      if (!meta || !meta.version) throw new Error('A TEKNO-ban még nincs feltöltött riport. A szerkesztőben a „Feltöltés a TEKNO-ba” gombbal tölthető fel.');
+      var parts = [];
+      for (var i = 0; i < meta.chunks; i++) {
+        secProgress('Adatok letöltése… ' + (i + 1) + ' / ' + meta.chunks);
+        var c = await fsGet('riport/c_' + meta.version + '_' + i);
+        if (!c) throw new Error('Hiányzó adatdarab (' + (i + 1) + '/' + meta.chunks + '). Töltsd fel újra a szerkesztőből.');
+        parts.push(c.data);
+      }
+      return { readonly: true, isDemo: !!meta.isDemo, subtitle: meta.subtitle || '', exportedAt: meta.exportedAt || null, format: meta.format, payload: parts.join(''), _meta: meta };
+    }
+
+    // Nyilvános (adat nélküli) riport: belépés → letöltés a TEKNO-ból
+    async function cloudGateAndLoad() {
+      state.cloud = true;
+      for (;;) {
+        if (!(await tkToken())) {
+          var ok = await secGate('login', {});
+          if (!ok) return;
+        }
+        try {
+          var w = await cloudFetchWrapper();
+          secProgress('Adatok kibontása…');
+          await applyWrapper(w);
+          secProgress(null);
+          renderCloudBadge();
+          return;
+        } catch (err) {
+          secProgress(null);
+          if (err.code === 401) { tkClear(); continue; }
+          if (err.code === 403) { await secGate('login', { msg: err.message, text: 'Be vagy jelentkezve (' + ((tkLoad() || {}).email || '') + '), de ez a fiók nincs a hozzáférési listán. Lépj be másik fiókkal, vagy kérd az adminisztrátort.' }); continue; }
+          showErrorBanner(err.message);
+          return;
+        }
+      }
+    }
+
+    function renderCloudBadge() {
+      var el = document.getElementById('sec-user');
+      var a = tkLoad();
+      if (!el) return;
+      if (a && a.email) {
+        el.classList.remove('hidden');
+        el.querySelector('span').textContent = a.email;
+      } else el.classList.add('hidden');
+    }
+
+    function buildExportDataObj() {
+      return {
+        occ: { dates: state.occ.dates, routes: state.occ.routes, rowsFlat: Array.from(state.occ.rowsFlat) },
+        pass: state.pass.map(function (r) { return [r.date, r.balSzem, r.bakSzem, r.mecSzem, r.balEt, r.bakEt, r.mecEt, r.balOssz, r.bakOssz, r.mecOssz]; }),
+        km: state.km, bisz: state.bisz, dep: state.dep, bikeSales: state.bikeSales, bikeOD: state.bikeOD, punct: state.punct,
+        settings: { fc: { target: state.fc.target, unitC1: state.fc.unitC1, unitC2: state.fc.unitC2, useTrend: state.fc.useTrend, priceC1: state.fc.priceC1, priceC2: state.fc.priceC2 } }
+      };
+    }
+
+    async function ensureLogin(title) {
+      if (await tkToken()) return true;
+      return !!(await secGate('login', { closable: true, title: title }));
+    }
+
+    // Szerkesztő: a jelenlegi TEKNO-adat betöltése (ehhez jönnek a havi új fájlok)
+    async function cloudLoadIntoEditor() {
+      if (!(await ensureLogin('Betöltés a TEKNO-ból'))) return;
+      try {
+        var w = await cloudFetchWrapper();
+        secProgress('Adatok kibontása…');
+        var wasRO = state.readonly;
+        await applyWrapper(Object.assign({}, w, { readonly: false }));
+        state.readonly = wasRO;
+        document.body.setAttribute('data-readonly', wasRO ? 'true' : 'false');
+        secProgress(null);
+        renderAll();
+        renderCloudBadge();
+        showToast('Betöltve a TEKNO-ból (feltöltve: ' + (w._meta.uploadedAt || '').replace('T', ' ').slice(0, 16) + ', ' + (w._meta.uploadedBy || '') + ')', 'success');
+      } catch (err) {
+        secProgress(null);
+        showToast(err.message, 'error');
+      }
+    }
+
+    // Szerkesztő: feltöltés a TEKNO-ba (darabolva), összesítő Abigélnek, régi darabok törlése
+    async function cloudUpload() {
+      if (!state.occ || !state.occ.rowCount || state.isDemo) { showToast('Előbb töltsd be a saját adatokat (vagy a TEKNO-ból a jelenlegit).', 'warn'); return; }
+      if (!(await ensureLogin('Feltöltés a TEKNO-ba'))) return;
+      try {
+        secProgress('Tömörítés…');
+        var comp = await compressPayload(buildExportDataObj());
+        var p = comp.payload, n = Math.ceil(p.length / TK_CHUNK);
+        var old = await fsGet('riport/meta').catch(function (e) { if (e.code === 403) throw e; return null; });
+        var ver = Date.now().toString(36);
+        for (var i = 0; i < n; i++) {
+          secProgress('Feltöltés… ' + (i + 1) + ' / ' + n);
+          await fsSet('riport/c_' + ver + '_' + i, { data: p.slice(i * TK_CHUNK, (i + 1) * TK_CHUNK) });
+        }
+        secProgress('Összesítő feltöltése…');
+        var sum = buildRiportSummary();
+        await fsSet('riport/summary', { json: JSON.stringify(sum || {}), version: ver });
+        var now = new Date().toISOString();
+        await fsSet('riport/meta', { version: ver, chunks: n, format: comp.format, isDemo: !!state.isDemo, subtitle: state.subtitle || '', exportedAt: now.slice(0, 10), uploadedAt: now, uploadedBy: (tkLoad() || {}).email || '', size: p.length });
+        if (old && old.version && old.version !== ver) {
+          for (var k = 0; k < (old.chunks || 0); k++) { try { await fsDel('riport/c_' + old.version + '_' + k); } catch (e) { /* már törölve */ } }
+        }
+        secProgress(null);
+        showToast('Feltöltve a TEKNO-ba (' + n + ' darab, ' + (p.length / 1048576).toFixed(1).replace('.', ',') + ' MB). A TEKNO-ban és Abigélben mostantól ez látszik.', 'success');
+      } catch (err) {
+        secProgress(null);
+        if (err.code === 401) tkClear();
+        showToast('Feltöltési hiba: ' + err.message, 'error');
+      }
+    }
+
+    // Jelszó bekérése a titkosított mentéshez (kétszer, legalább 10 karakter)
+    function askExportPassword() {
+      var m = document.getElementById('sec-pw-modal');
+      var p1 = document.getElementById('sec-pw1'), p2 = document.getElementById('sec-pw2'), msg = document.getElementById('sec-pw-msg');
+      p1.value = ''; p2.value = ''; msg.textContent = '';
+      m.classList.remove('hidden');
+      setTimeout(function () { p1.focus(); }, 30);
+      return new Promise(function (resolve) {
+        var done = function (v) { m.classList.add('hidden'); document.getElementById('sec-pw-form').onsubmit = null; document.getElementById('sec-pw-cancel').onclick = null; resolve(v); };
+        document.getElementById('sec-pw-cancel').onclick = function () { done(null); };
+        document.getElementById('sec-pw-form').onsubmit = function (e) {
+          e.preventDefault();
+          if (p1.value.length < 10) { msg.textContent = 'Legalább 10 karakteres jelszót adj meg.'; return; }
+          if (p1.value !== p2.value) { msg.textContent = 'A két jelszó nem egyezik.'; return; }
+          done(p1.value);
+        };
+      });
+    }
+
+    function bindSecureEvents() {
+      var up = document.getElementById('btn-cloud-upload'), ld = document.getElementById('btn-cloud-load'), lo = document.getElementById('sec-logout');
+      if (up) up.addEventListener('click', cloudUpload);
+      if (ld) ld.addEventListener('click', cloudLoadIntoEditor);
+      if (lo) lo.addEventListener('click', function () { tkClear(); location.reload(); });
+      renderCloudBadge();
+    }
+    /* =========================================================================
        TELJES FRISSÍTÉS ÉS ESEMÉNYKEZELŐK
        ========================================================================= */
     function updateMetaAndHeader() {
@@ -9101,6 +9483,7 @@
     }
 
     function bindAllEvents() {
+      bindSecureEvents();
       // Hiba sáv bezárása
       document.getElementById('error-banner-close').addEventListener('click', function () {
         document.getElementById('error-banner').classList.add('hidden');
@@ -9520,26 +9903,11 @@
         var rawTxt = emb && emb.textContent ? emb.textContent.trim() : '';
         if (rawTxt && rawTxt !== '{}') {
           var parsed = JSON.parse(rawTxt);
-          if (parsed && parsed.format && parsed.payload) {
-            var payload = await decompressPayload(parsed);
-            state.occ = prepareOccModel(payload.occ);
-            state.pass = preparePassModel(payload.pass);
-            if (payload.km && payload.km.byNum) state.km = payload.km;
-            if (payload.bisz && payload.bisz.byNum) state.bisz = payload.bisz;
-            if (payload.dep && payload.dep.byNum) state.dep = payload.dep;
-            if (payload.bikeSales && payload.bikeSales.months) state.bikeSales = payload.bikeSales;
-            if (payload.bikeOD && payload.bikeOD.months) state.bikeOD = payload.bikeOD;
-            if (payload.punct && payload.punct.months) state.punct = payload.punct;
-            if (payload.settings && payload.settings.fc) Object.assign(state.fc, payload.settings.fc);
-            state.readonly = !!parsed.readonly || state.readonly;
-            if (state.readonly) document.body.setAttribute('data-readonly', 'true');
-            state.isDemo = !!parsed.isDemo;
-            state.exportedAt = parsed.exportedAt || null;
-            if (parsed.subtitle) state.subtitle = parsed.subtitle;
-            renderAll();
-            return;
-          }
+          if (parsed && parsed.enc && parsed.ct) { await unlockEncrypted(parsed); return; }
+          if (parsed && parsed.format && parsed.payload) { await applyWrapper(parsed); return; }
         }
+        // Nyilvános, adat nélküli riport (TEKNO / Abigél): bejelentkezés és letöltés a TEKNO-ból
+        if (state.readonly) { await cloudGateAndLoad(); return; }
         loadSampleDataset();
       } catch (err) {
         showErrorBanner(err && err.message ? err.message : String(err));
