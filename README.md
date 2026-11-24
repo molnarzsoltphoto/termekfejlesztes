@@ -95,3 +95,7 @@ Kiválasztott vonatnévre és időszakra (utolsó 12 / 3 hónap, naptári év, e
 
 - Hibrid (nem helyjegyköteles) InterCityk: NAPFÉNY, KRESZ GÉZA, SOMOGY, RIPPL-RÓNAI, BAKONY, GÖCSEJ, BÉKÉS, valamint a balatoni elő-, fő- és utószezonon kívül a BALATON és a TÓPART. A foglaltsági adatok náluk csak az IC vonatrészre vonatkoznak. Jelölés („hibrid IC”) az 1. fül táblázatában és figyelmeztetés a KPI-k alatt, a 4. fül vonatcelláiban, a vonatnév-elemzésben (a kapacitás-csökkentési javaslat helyett figyelmeztetéssel) és a figyelőlistán. Lista: `HYB_ALWAYS` / `HYB_OFFSEASON` a kódban.
 - 1. fül: külön „Bisztró eladások” KPI-kártya (tranzakció, bevétel, átlagkosár) a szűrésre, ha a bisztró-munkafüzet be van töltve.
+
+## Kapacitás: összes hely vagy ülőhely
+
+A fejlécben (a fülek alatt) kapcsoló: **Összes hely** (alapértelmezés: 1., 2. osztály, prémium, fekvő- és hálóhely) vagy **Ülőhely** (1., 2. osztály és prémium). Minden foglalási és kihasználtsági mutató ehhez számol (1. fül KPI-k és táblázat, 4. fül, menetrendszerűségi kártya járati adatai, figyelőlista, vonatnév-elemzés, balatoni szezon). A választást a böngésző megjegyzi. A menetrendszerűség–kereslet elemzés mindig az összes hellyel számol; az osztályonkénti bontások (1. o., 2. o., prémium, fekvő, háló) változatlanok.
