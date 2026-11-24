@@ -10078,7 +10078,9 @@
           var ysl = ys.length >= 3 ? olsSlope(yx, ys) : null;
           var yAll = bprYoY(e.s, mo, ms);
           if (!yAll || yAll.bk < 1000) return;
-          trend.push({ name: e.name, n: ms.length, p0: ps[0], p1: ps[ps.length - 1], sl: sl, ysl: ysl, y0: ys.length ? ys[0] : null, y1: ys.length ? ys[ys.length - 1] : null, yAll: yAll.yoy });
+          var tb = 0, tbp = 0;
+          ms.forEach(function (m) { var i = mo.mIdx[m], j = mo.mIdx[moPrev(m)]; if (i !== undefined && j !== undefined) { tb += e.s.bk[i]; tbp += e.s.bk[j]; } });
+          trend.push({ name: e.name, n: ms.length, p0: ps[0], p1: ps[ps.length - 1], sl: sl, ysl: ysl, y0: ys.length ? ys[0] : null, y1: ys.length ? ys[ys.length - 1] : null, yAll: yAll.yoy, tot: tbp ? 100 * (tb / tbp - 1) : null });
         });
         trend.sort(function (a, b) { return a.sl - b.sl; });
       }
@@ -10097,13 +10099,21 @@
         h += '<div class="empty-state" style="padding:16px;">A trendhez legalább 3 hónap menetrendszerűségi adat kell; most ' + pms.length + ' hónap van betöltve. A szerkesztő 8. mezőjébe az előző hónapok kimutatásai is betölthetők (egyszerre több fájl).</div>';
       } else {
         var shown = trend.filter(function (t) { return EXPORT_FULL || t.sl <= -0.5; }).slice(0, EXPORT_FULL ? Infinity : 15);
-        h += '<div class="table-wrap"><table class="data-table t4-only t4-pdt"><thead><tr><th>Vonatnév</th><th class="num">Hónap</th><th class="num">Menetrendszerűség (első → utolsó)</th><th class="num">Trend (százalékpont / hó)</th><th class="num">Foglalás / vonat YoY (első → utolsó)</th><th class="num">YoY trend (százalékpont / hó)</th><th>Értékelés</th></tr></thead><tbody>' +
+        h += '<div class="table-wrap"><table class="data-table t4-only t4-pdt"><thead><tr><th>Vonatnév</th><th class="num">Hónap</th><th class="num">Menetrendszerűség (első → utolsó)</th><th class="num">Trend (százalékpont / hó)</th><th class="num">Foglalás / vonat YoY (első → utolsó)</th><th class="num">YoY trend (százalékpont / hó)</th><th class="num">Foglalás / vonat YoY (időszak)</th><th class="num">Összes foglalás YoY (időszak)</th><th>Értékelés</th></tr></thead><tbody>' +
           (shown.length ? shown.map(function (t) {
-            var verdict = t.sl <= -1 ? (t.ysl !== null && t.ysl < -0.5 ? '<span class="pd-flag pd-bad">Romló menetrendszerűség, gyengülő kereslet</span>' : '<span class="pd-flag">Romló menetrendszerűség, a kereslet tartja magát</span>') : '<span class="pd-flag pd-mild">Enyhén romló menetrendszerűség</span>';
+            // csökkenő kereslet: az időszak egészében kevesebb a foglalás / vonat, vagy a végén már csökken és a trend is lefelé mutat
+            var falling = (t.yAll !== null && t.yAll < -2) || (t.y1 !== null && t.y1 < -5 && t.ysl !== null && t.ysl < -0.5);
+            var slowing = !falling && t.ysl !== null && t.ysl < -0.5;
+            var verdict = t.sl <= -1
+              ? (falling ? '<span class="pd-flag pd-bad">Romló menetrendszerűség, csökkenő kereslet</span>'
+                : slowing ? '<span class="pd-flag">Romló menetrendszerűség, a kereslet nő, de lassuló ütemben</span>'
+                : '<span class="pd-flag">Romló menetrendszerűség, a kereslet nem csökken</span>')
+              : '<span class="pd-flag pd-mild">Enyhén romló menetrendszerűség' + (falling ? ', csökkenő kereslet' : '') + '</span>';
+            if (!falling && t.tot !== null && t.tot < -10) verdict += '<div class="fc-small">vonatonként nem csökken, de az összes foglalás ' + fmtSigned(t.tot, 0, '%') + ' (kevesebb közlekedés – pl. vonatpótlás, menetrend)</div>';
             return '<tr data-name="' + escHtml(t.name) + '"><td><strong>' + escHtml(t.name) + '</strong></td><td class="num">' + t.n + '</td><td class="num">' + fmtPunctPill(t.p0) + ' → ' + fmtPunctPill(t.p1) + '</td><td class="num"><strong>' + fmtSigned(t.sl, 1) + '</strong></td>' +
-              '<td class="num">' + fmtSigned(t.y0, 1, '%') + ' → ' + fmtSigned(t.y1, 1, '%') + '</td><td class="num">' + fmtSigned(t.ysl, 1) + '</td><td>' + verdict + '</td></tr>';
-          }).join('') : '<tr><td colspan="7" class="occ-none" style="padding:14px;">Egyik vonatnévnél sem romlik tartósan a menetrendszerűség (trend −0,5 százalékpont / hó alatt).</td></tr>') + '</tbody></table></div>' +
-          '<div class="fc-small">Trend: lineáris illesztés a betöltött hónapokra (legalább 3 hónap, legalább 1 000 foglalás). „Gyengülő kereslet”: a foglalás / vonat előző évhez mért változása is csökkenő trendű. Kattints egy sorra a havi bontásért.</div>';
+              '<td class="num">' + fmtSigned(t.y0, 1, '%') + ' → ' + fmtSigned(t.y1, 1, '%') + '</td><td class="num">' + fmtSigned(t.ysl, 1) + '</td><td class="num"><strong>' + fmtSigned(t.yAll, 1, '%') + '</strong></td><td class="num">' + fmtSigned(t.tot, 1, '%') + '</td><td>' + verdict + '</td></tr>';
+          }).join('') : '<tr><td colspan="9" class="occ-none" style="padding:14px;">Egyik vonatnévnél sem romlik tartósan a menetrendszerűség (trend −0,5 százalékpont / hó alatt).</td></tr>') + '</tbody></table></div>' +
+          '<div class="fc-small">Trend: lineáris illesztés a betöltött hónapokra (legalább 3 hónap, legalább 1 000 foglalás). „Csökkenő kereslet”: a foglalás / vonat (fekvő- és hálóhellyel együtt) az időszak egészében kevesebb, mint egy évvel korábban, vagy az utolsó hónapban már csökken és a trend is lefelé mutat. „Lassuló ütemben”: még nő, de a növekedés üteme hónapról hónapra kisebb. Kattints egy sorra a havi bontásért.</div>';
       }
       host.innerHTML = h;
       pdScatter(document.getElementById('pd-scatter'), pts, netP === null ? null : 100 * netP, netY ? netY.yoy : null, slope, t4.pdName);
