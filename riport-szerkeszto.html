@@ -1524,6 +1524,7 @@
     .bs-names summary { cursor: pointer; padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); font-size: 13px; }
     .bs-names-list { position: absolute; z-index: 30; top: 38px; left: 0; width: 320px; max-height: 360px; overflow: auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); box-shadow: var(--shadow); padding: 8px 10px; display: grid; gap: 4px; font-size: 13px; }
     table.bs-kpi th:first-child { text-align: left; font-weight: 600; white-space: nowrap; }
+    table.bs-kpi tr.bs-grp th { background: var(--surface-alt); color: var(--navy); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em; padding-top: 8px; }
     .bs-chg { display: inline-block; margin-left: 4px; font-size: 11.5px; color: var(--text-muted); }
     table.bs-names-t td { white-space: nowrap; }
 
@@ -10942,8 +10943,9 @@
       occ.routes.forEach(function (rt, r) { if (m[r]) s.set(rt[1], (s.get(rt[1]) || 0) + 1); });
       return Array.from(s.keys()).sort(function (a, b) { return a.charAt(0) === '(' ? 1 : b.charAt(0) === '(' ? -1 : a.localeCompare(b, 'hu'); });
     }
-    // Napi összegek egy útvonal-maszkra: [foglalás, kapacitás, közlekedés, ≥90%, kerékpáros közl., kerékpár tele, 1. o. f, 1. o. k, 2. o.+prém f, 2. o.+prém k]
-    var BAL_K = 10;
+    // Napi összegek egy útvonal-maszkra: [foglalás, kapacitás, közlekedés, ≥90%, kerékpáros közl., kerékpár tele, 1. o. f, 1. o. k, 2. o. f, 2. o. k,
+    //   prémium f, prémium k, kerékpár f, kerékpár k, prémiumos közl., prémium ≥90%]
+    var BAL_K = 16;
     function balDateAgg(mask, perName) {
       var occ = state.occ, nD = occ.dates.length, R = occ.rowsFlat, A = new Float64Array(nD * BAL_K), names = null, NI = null, PN = null;
       if (perName) {
@@ -10959,7 +10961,9 @@
         var bk = R[off + 3] + R[off + 5] + R[off + 13], cap = R[off + 2] + R[off + 4] + R[off + 12];
         A[b] += bk; A[b + 1] += cap; A[b + 2] += 1; if (cap && bk >= 0.9 * cap) A[b + 3] += 1;
         if (R[off + 6] > 0) { A[b + 4] += 1; if (R[off + 7] >= R[off + 6]) A[b + 5] += 1; }
-        A[b + 6] += R[off + 3]; A[b + 7] += R[off + 2]; A[b + 8] += R[off + 5] + R[off + 13]; A[b + 9] += R[off + 4] + R[off + 12];
+        A[b + 6] += R[off + 3]; A[b + 7] += R[off + 2]; A[b + 8] += R[off + 5]; A[b + 9] += R[off + 4];
+        A[b + 10] += R[off + 13]; A[b + 11] += R[off + 12]; A[b + 12] += R[off + 7]; A[b + 13] += R[off + 6];
+        if (R[off + 12] > 0) { A[b + 14] += 1; if (R[off + 13] >= 0.9 * R[off + 12]) A[b + 15] += 1; }
         if (PN) { var p = (NI[r] * nD + d) * 4; PN[p] += bk; PN[p + 1] += cap; PN[p + 2] += 1; if (cap && bk >= 0.9 * cap) PN[p + 3] += 1; }
       }
       return { A: A, names: names, PN: PN, nD: nD };
@@ -10972,14 +10976,19 @@
     function balDays(from, to) { return Math.round((Date.parse(to + 'T00:00:00Z') - Date.parse(from + 'T00:00:00Z')) / 86400000) + 1; }
     function balStat(D, from, to) {
       var rg = balRange(from, to);
-      var s = { from: from, to: to, days: balDays(from, to), dataDays: 0, bk: 0, cap: 0, runs: 0, hi: 0, bikeRuns: 0, bikeFull: 0, b1: 0, c1: 0, b2: 0, c2: 0 };
+      var s = { from: from, to: to, days: balDays(from, to), dataDays: 0, bk: 0, cap: 0, runs: 0, hi: 0, bikeRuns: 0, bikeFull: 0, b1: 0, c1: 0, b2: 0, c2: 0, bp: 0, cp: 0, bikeB: 0, bikeC: 0, premRuns: 0, premFull: 0 };
       if (!rg) return s;
       for (var d = rg[0]; d <= rg[1]; d++) {
         var b = d * BAL_K;
         if (D.A[b + 2]) s.dataDays++;
         s.bk += D.A[b]; s.cap += D.A[b + 1]; s.runs += D.A[b + 2]; s.hi += D.A[b + 3]; s.bikeRuns += D.A[b + 4]; s.bikeFull += D.A[b + 5];
         s.b1 += D.A[b + 6]; s.c1 += D.A[b + 7]; s.b2 += D.A[b + 8]; s.c2 += D.A[b + 9];
+        s.bp += D.A[b + 10]; s.cp += D.A[b + 11]; s.bikeB += D.A[b + 12]; s.bikeC += D.A[b + 13]; s.premRuns += D.A[b + 14]; s.premFull += D.A[b + 15];
       }
+      if (!s.bp) { s.cp = 0; s.premRuns = 0; s.premFull = 0; }   // prémium kapacitás foglalás nélkül = nem értékesített
+      s.occP = s.cp ? s.bp / s.cp : null;
+      s.bikeOcc = s.bikeC ? s.bikeB / s.bikeC : null;
+      s.bikePerDay = s.dataDays && s.bikeC ? s.bikeB / s.dataDays : null;
       s.complete = s.dataDays >= s.days * 0.9;
       s.perDay = s.dataDays ? s.bk / s.dataDays : null;
       s.bpr = s.runs ? s.bk / s.runs : null;
@@ -11072,11 +11081,18 @@
         var lenTxt = p && p.days !== s.days ? ', ' + (s.days > p.days ? (s.days - p.days) + ' nappal hosszabb' : (p.days - s.days) + ' nappal rövidebb') + ', mint ' + prev + '-ben' : '';
         lines.push('<b>' + sb.l + '</b> (' + balShortDate(s.from) + ' – ' + balShortDate(s.to) + ', ' + s.days + ' nap' + lenTxt + '): naponta átlagosan ' + fmtInt(s.perDay) + ' foglalás' + (ch !== null ? ' (' + anChg(ch) + ' ' + prev + '-hez képest)' : '') +
           ', vonatonként ' + fmtInt(s.bpr) + (chB !== null ? ' (' + anChg(chB) + ')' : '') + ', kihasználtság ' + anPct(100 * s.occ) + (dOcc !== null ? ' (' + anPp(dOcc) + ')' : '') +
-          ', ' + fmtDec(s.runsDay, 0) + ' közlekedés naponta; a közlekedések ' + anPct(s.runs ? 100 * s.hi / s.runs : 0) + '-a volt legalább 90%-os' + (s.bikeRuns ? ', a kerékpáros vonatok ' + anPct(100 * s.bikeFull / s.bikeRuns) + '-án megtelt a kerékpárhely' : '') +
+          ', ' + fmtDec(s.runsDay, 0) + ' közlekedés naponta; a közlekedések ' + anPct(s.runs ? 100 * s.hi / s.runs : 0) + '-a volt legalább 90%-os' +
+          (s.cp ? '; prémium: ' + anPct(100 * s.occP) + (p && p.occP !== null ? ' (' + anPp(100 * (s.occP - p.occP)) + ')' : '') + ', a prémiumos közlekedések ' + anPct(100 * s.premFull / s.premRuns, 0) + '-ában legalább 90%' : '') +
+          (s.bikeC ? '; kerékpár: ' + fmtInt(s.bikePerDay) + ' kerékpárhely-foglalás naponta' + (p && p.bikePerDay ? ' (' + anChg(balChg(s.bikePerDay, p.bikePerDay)) + ')' : '') + ', ' + anPct(100 * s.bikeOcc) + ' kihasználtság' + (p && p.bikeOcc !== null ? ' (' + anPp(100 * (s.bikeOcc - p.bikeOcc)) + ')' : '') + ', a kerékpáros vonatok ' + anPct(100 * s.bikeFull / s.bikeRuns) + '-án megtelt' : '') +
           (s.pass && !noPass ? '; Balaton24 napijegy: ' + fmtInt(s.pass.perDay) + ' / nap' + (p && p.pass ? ' (' + anChg(balChg(s.pass.perDay, p.pass.perDay)) + ')' : '') : '') + (s.complete ? '' : ' – az adat hiányos') + '.');
-        if (ch !== null) sum.push({ w: Math.abs(ch), t: sb.l + ': ' + fmtInt(s.perDay) + ' foglalás / nap (' + anChg(ch) + '), kihasználtság ' + anPct(100 * s.occ, 0) + (dOcc !== null ? ' (' + anPp(dOcc) + ')' : '') + '.' });
+        if (ch !== null) sum.push({ w: Math.abs(ch) + (sb.k === 'fo' ? 5 : 0), t: sb.l + ': ' + fmtInt(s.perDay) + ' foglalás / nap (' + anChg(ch) + '), kihasználtság ' + anPct(100 * s.occ, 0) + (dOcc !== null ? ' (' + anPp(dOcc) + ')' : '') +
+          (s.cp ? '; prémium ' + anPct(100 * s.occP, 0) + (p && p.occP !== null ? ' (' + anPp(100 * (s.occP - p.occP)) + ')' : '') : '') +
+          (s.bikeC ? '; kerékpár ' + fmtInt(s.bikePerDay) + ' / nap' + (p && p.bikePerDay ? ' (' + anChg(balChg(s.bikePerDay, p.bikePerDay)) + ')' : '') : '') + '.' });
         var hiShare = s.runs ? s.hi / s.runs : 0;
         if (hiShare >= 0.15) rec.push({ w: 10 + 30 * hiShare, t: sb.l + ': a közlekedések ' + anPct(100 * hiShare, 0) + '-a legalább 90%-os – kapacitásbővítés ebben az időszakban' + (sb.k === 'fo' ? '' : ' (nem csak a főszezonban)') + '.' });
+        if (s.premRuns && s.premFull / s.premRuns >= 0.15) rec.push({ w: 8 + 25 * s.premFull / s.premRuns, t: sb.l + ': a prémium a közlekedések ' + anPct(100 * s.premFull / s.premRuns, 0) + '-ában legalább 90%-os – több prémium hely vagy szezonális prémium felár.' });
+        else if (s.premRuns > 50 && s.occP !== null && s.occP < 0.3) rec.push({ w: 5, t: sb.l + ': a prémium Ø ' + anPct(100 * s.occP, 0) + ' – a prémium kínálat szezonális árazása vagy átsorolása.' });
+        if (p && p.bikePerDay && s.bikePerDay && balChg(s.bikePerDay, p.bikePerDay) >= 15 && s.bikeOcc >= 0.5) rec.push({ w: 7, t: sb.l + ': a kerékpárhely-foglalás ' + anChg(balChg(s.bikePerDay, p.bikePerDay)) + ', a kihasználtság ' + anPct(100 * s.bikeOcc, 0) + ' – a kerékpáros kapacitás bővítése a következő szezonra.' });
         if (s.bikeRuns && s.bikeFull / s.bikeRuns >= 0.1) rec.push({ w: 8 + 20 * s.bikeFull / s.bikeRuns, t: sb.l + ': a kerékpárhely a közlekedések ' + anPct(100 * s.bikeFull / s.bikeRuns, 0) + '-ában megtelt – több kerékpárhely.' });
         if (sb.k === 'uto' && s.occ !== null && s.occ < 0.35 && s.runs > 50) rec.push({ w: 6, t: 'Utószezon: Ø ' + anPct(100 * s.occ, 0) + ' kihasználtság – a sűrítés hossza vagy mértéke felülvizsgálható.' });
         if (sb.k === 'uto' && s.occ !== null && s.occ >= 0.6) rec.push({ w: 7, t: 'Utószezon: Ø ' + anPct(100 * s.occ, 0) + ' kihasználtság – az utószezon meghosszabbítása vizsgálható.' });
@@ -11120,6 +11136,8 @@
       var D = balDateAgg(mask, true), T = balTable(D), year = bs.year, cur = T[year], prev = String(+year - 1);
       var tx = balSeasonText(T, year, D);
       var S = BAL_SEASONS[year];
+      var hasPrem = Object.keys(T).some(function (y) { return BAL_SUB.some(function (sb) { return T[y][sb.k].cp > 0; }); });
+      var hasBike = Object.keys(T).some(function (y) { return BAL_SUB.some(function (sb) { return T[y][sb.k].bikeC > 0; }); });
       var h = '<div class="an-head"><div class="an-kicker">Balatoni szezon</div><h2>' + year + ': elő-, fő- és utószezon</h2><div class="an-sub">' +
         BAL_SUB.map(function (sb) { return sb.l + ' ' + balShortDate(S[sb.k][0]) + ' – ' + balShortDate(S[sb.k][1]); }).join(' • ') + ' • összevetés: ' + prev + ' azonos szezonja • készült: ' + todayHu() + '</div></div>';
       // szezononkénti táblázat
@@ -11133,13 +11151,24 @@
         row('1. / 2. osztály', function (s) { return (s.c1 ? anPct(100 * s.b1 / s.c1, 0) : '—') + ' / ' + (s.c2 ? anPct(100 * s.b2 / s.c2, 0) : '—'); }) +
         row('Közlekedés / nap', function (s) { return s.runsDay === null ? '—' : fmtDec(s.runsDay, 0); }) +
         row('≥90%-os közlekedés', function (s) { return fmtInt(s.hi) + ' (' + anPct(s.runs ? 100 * s.hi / s.runs : 0, 0) + ')'; }) +
-        row('Kerékpárhely tele', function (s) { return s.bikeRuns ? fmtInt(s.bikeFull) + ' (' + anPct(100 * s.bikeFull / s.bikeRuns, 0) + ')' : '—'; }) +
-        row('Balaton24 napijegy / nap', function (s, p) { return s.pass ? fmtInt(s.pass.perDay) + (p && p.pass ? ' <span class="bs-chg">' + anChg(balChg(s.pass.perDay, p.pass.perDay)) + '</span>' : '') : '—'; }) +
+        (hasPrem ? '<tr class="bs-grp"><th colspan="4">Prémium</th></tr>' +
+          row('Prémium foglalás / nap', function (s) { return s.cp && s.dataDays ? fmtInt(s.bp / s.dataDays) : '—'; }) +
+          row('Prémium kihasználtság', function (s, p) { return s.occP === null ? '—' : anPct(100 * s.occP) + (p && p.occP !== null ? ' <span class="bs-chg">' + anPp(100 * (s.occP - p.occP)).replace(' százalékpont', ' %p') + '</span>' : ''); }) +
+          row('Prémium ≥90%', function (s) { return s.premRuns ? fmtInt(s.premFull) + ' (' + anPct(100 * s.premFull / s.premRuns, 0) + ')' : '—'; }) : '') +
+        (hasBike ? '<tr class="bs-grp"><th colspan="4">Kerékpár</th></tr>' +
+          row('Kerékpárhely-foglalás / nap', function (s, p) { return s.bikePerDay === null ? '—' : fmtInt(s.bikePerDay) + (p && p.bikePerDay ? ' <span class="bs-chg">' + anChg(balChg(s.bikePerDay, p.bikePerDay)) + '</span>' : ''); }) +
+          row('Kerékpárhely-kihasználtság', function (s, p) { return s.bikeOcc === null ? '—' : anPct(100 * s.bikeOcc) + (p && p.bikeOcc !== null ? ' <span class="bs-chg">' + anPp(100 * (s.bikeOcc - p.bikeOcc)).replace(' százalékpont', ' %p') + '</span>' : ''); }) +
+        row('Kerékpárhely tele', function (s) { return s.bikeRuns ? fmtInt(s.bikeFull) + ' (' + anPct(100 * s.bikeFull / s.bikeRuns, 0) + ')' : '—'; }) : '') +
+        '<tr class="bs-grp"><th colspan="4">Turisztikai napijegy</th></tr>' + row('Balaton24 napijegy / nap', function (s, p) { return s.pass ? fmtInt(s.pass.perDay) + (p && p.pass ? ' <span class="bs-chg">' + anChg(balChg(s.pass.perDay, p.pass.perDay)) + '</span>' : '') : '—'; }) +
         '</tbody></table></div><p class="fc-small">Zárójelben / szürkével: változás ' + prev + ' azonos szezonjához (a napi és vonatonkénti értékek a szezonhossz-különbséget kiszűrik).</p></section>';
       h += '<section class="an-sec an-sum"><h3>Összefoglaló</h3><ul>' + (tx.sum.length ? tx.sum : ['Előző évi összevetéshez nincs adat.']).map(function (s) { return '<li>' + s + '</li>'; }).join('') + '</ul></section>';
       h += anSection('bs-daily', 'Napi forgalom a szezonban', tx.lines.join(' '), balSvgDaily(D, year), '<span><i style="background:#0b2e59"></i>' + year + '</span><span><i class="dash"></i>' + prev + ' (azonos hétnapok)</span><span><i style="background:#ecfdf5;border:1px solid #a7f3d0"></i>elő</span><span><i style="background:#eff6ff;border:1px solid #bfdbfe"></i>fő</span><span><i style="background:#fffbeb;border:1px solid #fde68a"></i>utószezon</span>');
       h += anSection('bs-perday', 'Foglalás naponta – évek összevetése', 'A szezonok hossza évente eltér, ezért a napi átlag a mérvadó.', balSvgGroups(T, function (s) { return s.perDay; }, '', 'foglalás / nap'), balYearLegend(T));
       h += anSection('bs-occ', 'Kihasználtság – évek összevetése', '', balSvgGroups(T, function (s) { return s.occ === null ? null : 100 * s.occ; }, '%', 'ülőhely-kihasználtság'), balYearLegend(T));
+      if (hasPrem) h += anSection('bs-prem', 'Prémium – évek összevetése', BAL_SUB.map(function (sb) { var s = cur[sb.k], p = T[prev] ? T[prev][sb.k] : null; return s.cp ? sb.l + ': ' + anPct(100 * s.occP) + (p && p.occP !== null ? ' (' + anPp(100 * (s.occP - p.occP)) + ')' : '') + ', ' + fmtInt(s.bp / Math.max(1, s.dataDays)) + ' prémium foglalás naponta, a prémiumos közlekedések ' + anPct(100 * s.premFull / s.premRuns, 0) + '-ában legalább 90%' : ''; }).filter(Boolean).join('. ') + '.',
+        balSvgGroups(T, function (s) { return s.occP === null ? null : 100 * s.occP; }, '%', 'prémium kihasználtság'), balYearLegend(T));
+      if (hasBike) h += anSection('bs-bike', 'Kerékpár – évek összevetése', BAL_SUB.map(function (sb) { var s = cur[sb.k], p = T[prev] ? T[prev][sb.k] : null; return s.bikeC ? sb.l + ': ' + fmtInt(s.bikePerDay) + ' kerékpárhely-foglalás naponta' + (p && p.bikePerDay ? ' (' + anChg(balChg(s.bikePerDay, p.bikePerDay)) + ')' : '') + ', ' + anPct(100 * s.bikeOcc) + ' kihasználtság, a kerékpáros vonatok ' + anPct(100 * s.bikeFull / s.bikeRuns) + '-án megtelt' : ''; }).filter(Boolean).join('. ') + '.',
+        balSvgGroups(T, function (s) { return s.bikePerDay; }, '', 'kerékpárhely-foglalás / nap'), balYearLegend(T));
       // vonatnevenként
       var nameRows = [];
       if (D.names) {
