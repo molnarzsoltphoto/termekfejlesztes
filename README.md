@@ -81,7 +81,7 @@ Minden tartalmi blokk a címére kattintva becsukható / kinyitható (▾ / ▸)
 
 ## Vonatnév-elemzés (6. fül)
 
-Kiválasztott vonatnévre és időszakra (utolsó 12 / 3 hónap, naptári év) automatikus, szabályalapú szöveges elemzés grafikonokkal: összefoglaló, forgalom (foglalás / vonat havonta az előző évvel), kihasználtság osztályonként, a hét napjai, vonatonként (90% fölötti közlekedések), csúcsnapok, kerékpár, bisztró, pontosság, végül következtetések és javaslatok. Nyomtatható (A4 PDF) és PowerPointba menthető. A prémium, a fekvőhely és a hálóhely külön szerepel (kihasználtság, előző év, 90% fölötti közlekedések, javaslat); az ülőhely-kihasználtság az 1., 2. osztály és a prémium együtt. Küszöbök: telítettség ≥90%, rendszeres = a közlekedések ≥15%-a (legalább 3 alkalom), alacsony kihasználtság = Ø <35%.
+Kiválasztott vonatnévre és időszakra (utolsó 12 / 3 hónap, naptári év, egy hónap, egy hét vagy egy nap; hétnél és napnál az előző év azonos hétnapjaihoz mérve) automatikus, szabályalapú szöveges elemzés grafikonokkal: összefoglaló, forgalom (foglalás / vonat havonta az előző évvel), kihasználtság osztályonként, a hét napjai, vonatonként (90% fölötti közlekedések), csúcsnapok, kerékpár, bisztró, pontosság, végül következtetések és javaslatok. Nyomtatható (A4 PDF) és PowerPointba menthető. A prémium, a fekvőhely és a hálóhely külön szerepel (kihasználtság, előző év, 90% fölötti közlekedések, javaslat); az ülőhely-kihasználtság az 1., 2. osztály és a prémium együtt. Küszöbök: telítettség ≥90%, rendszeres = a közlekedések ≥15%-a (legalább 3 alkalom), alacsony kihasználtság = Ø <35%.
 
 ## Balatoni szezon (7. fül)
 

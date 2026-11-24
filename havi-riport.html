@@ -10500,14 +10500,40 @@
       return ms.slice(-12);
     }
 
+    // Időszak: { dIn, dPy (napindex-maszkok), months (érintett hónapok), label, kind: month | date }
+    function anPeriodSpec(an) {
+      var occ = state.occ, nD = occ.dates.length, dIn = new Uint8Array(nD), dPy = new Uint8Array(nD), per = an.per, from, to, label, kind = 'date';
+      var last = occ.dates[nD - 1];
+      if (per === 'M' || per === 'W' || per === 'D') {
+        if (per === 'M') { from = an.month + '-01'; to = an.month + '-31'; label = moLabelLong(an.month); kind = 'month'; }
+        else if (per === 'W') { var w = t4WeekOf(an.wday || last); from = w.mon; to = w.sun; label = w.year + '. ' + w.week + '. hét (' + balShortDate(from) + ' – ' + balShortDate(to) + ')'; }
+        else { from = to = an.day || last; label = from.slice(0, 4) + '. ' + balShortDate(from) + ' (' + AN_WD[occ.dateWd[occ.dates.indexOf(from)]] + ')'; }
+        for (var d = 0; d < nD; d++) if (occ.dates[d] >= from && occ.dates[d] <= to) {
+          dIn[d] = 1;
+          if (kind === 'month') { var pyD = moPrev(occ.dates[d].slice(0, 7)) + occ.dates[d].slice(7); var k = occ.dates.indexOf(pyD); if (k >= 0) dPy[k] = 1; }
+          else if (occ.datePy364Idx[d] >= 0) dPy[occ.datePy364Idx[d]] = 1;
+        }
+        if (kind === 'month') { var pm = moPrev(an.month); for (var d2 = 0; d2 < nD; d2++) if (occ.dates[d2].slice(0, 7) === pm) dPy[d2] = 1; }
+      } else {
+        var ms = anMonths(per), mSet = {}, pSet = {};
+        ms.forEach(function (m) { mSet[m] = 1; pSet[moPrev(m)] = 1; });
+        for (var d3 = 0; d3 < nD; d3++) { var mk = occ.dates[d3].slice(0, 7); if (mSet[mk]) dIn[d3] = 1; else if (pSet[mk]) dPy[d3] = 1; }
+        label = ms.length === 1 ? moLabelLong(ms[0]) : moLabelLong(ms[0]) + ' – ' + moLabelLong(ms[ms.length - 1]);
+        kind = 'month';
+      }
+      var mt = {};
+      for (var d4 = 0; d4 < nD; d4++) if (dIn[d4]) mt[occ.dates[d4].slice(0, 7)] = 1;
+      return { dIn: dIn, dPy: dPy, months: Object.keys(mt).sort(), label: label, kind: kind, short: per === 'W' || per === 'D', per: per };
+    }
+
     // Egy vonatnév minden adata egy menetben
-    function anCompute(name, per) {
+    function anCompute(name, spec) {
       var occ = state.occ, info = t4RouteInfo(occ), mo = occMonthly(), R = occ.rowsFlat, dep = routeDepOf(occ);
       var mask = new Uint8Array(occ.routes.length), any = false;
       occ.routes.forEach(function (rt, r) { if (rt[1] === name && info.kind[r] === 1) { mask[r] = 1; any = true; } });
       if (!any) return null;
-      var months = anMonths(per), mSet = {}, pmSet = {};
-      months.forEach(function (m) { mSet[m] = 1; pmSet[moPrev(m)] = 1; });
+      var months = spec.months, mSet = {};
+      months.forEach(function (m) { mSet[m] = 1; });
       var nM = mo.nM, M = { bk: new Float64Array(nM), cap: new Float64Array(nM), runs: new Float64Array(nM), bikeC: new Float64Array(nM), bikeB: new Float64Array(nM), bikeFull: new Float64Array(nM) };
       AN_CLS.forEach(function (k) { M['b' + k.k] = new Float64Array(nM); M['c' + k.k] = new Float64Array(nM); });
       var P = {}, PY = {}, FULL = {};
@@ -10515,7 +10541,7 @@
       var wd = [], wdPy = [];
       for (var w = 0; w < 7; w++) { wd.push({ bk: 0, cap: 0, runs: 0 }); wdPy.push({ bk: 0, cap: 0, runs: 0 }); }
       var trains = new Map(), days = new Map(), shift = 0, runsP = 0, runsPy = 0, bkP = 0, capP = 0, bkPy = 0, capPy = 0;
-      var bz = biszRowOf(occ), bzTr = 0, bzPax = 0, bikeFullP = 0, bikeRunsP = 0, bikeB = 0, bikeC = 0;
+      var bz = biszRowOf(occ), bzTr = 0, bzPax = 0, bzRev = 0, bikeFullP = 0, bikeRunsP = 0, bikeB = 0, bikeC = 0;
       var dmKey = function (d) { return occ.dates[d].slice(0, 7); };
       for (var i = 0; i < occ.rowCount; i++) {
         var off = i * STRIDE, r = R[off + 1];
@@ -10524,7 +10550,7 @@
         var c1 = R[off + 2], b1 = R[off + 3], c2 = R[off + 4], b2 = R[off + 5], cp = R[off + 12], bp = R[off + 13];
         var bk = b1 + b2 + bp, cap = c1 + c2 + cp;
         M.bk[mi] += bk; M.cap[mi] += cap; M.runs[mi] += 1;
-        var inP = !!mSet[mk], inPy = !inP && !!pmSet[mk];
+        var inP = !!spec.dIn[d], inPy = !inP && !!spec.dPy[d];
         for (var ci = 0; ci < AN_CLS.length; ci++) {
           var K = AN_CLS[ci], cc = R[off + K.ci], bb = R[off + K.ci + 1];
           if (!cc) continue;
@@ -10536,12 +10562,12 @@
         var full = R[off + 6] > 0 && R[off + 7] >= R[off + 6];
         if (full) M.bikeFull[mi] += 1;
         var wdi = occ.dateWd[d];
-        if (mSet[mk]) {
+        if (inP) {
           runsP++; bkP += bk; capP += cap;
           wd[wdi].bk += bk; wd[wdi].cap += cap; wd[wdi].runs++;
           if (R[off + 6] > 0) { bikeRunsP++; bikeB += R[off + 7]; bikeC += R[off + 6]; if (full) bikeFullP++; }
           if (c2 > 0 && c1 > 0 && b2 / c2 >= 0.9 && b1 / c1 <= 0.5) shift++;
-          if (bz && bz.tr[i] > 0) { bzTr += bz.tr[i]; bzPax += bk; }
+          if (bz && bz.tr[i] > 0) { bzTr += bz.tr[i]; bzPax += bk; bzRev += bz.rev[i]; }
           var num = occ.routes[r][0], t = trains.get(num);
           if (!t) { t = { num: num, dep: dep[r], dir: occ.routeDir[r], routes: new Map(), runs: 0, bk: 0, cap: 0, hi: 0, lo: 0, max: 0, bikeFull: 0, wdHi: new Int32Array(7) }; trains.set(num, t); }
           var oc = cap > 0 ? bk / cap : 0;
@@ -10550,36 +10576,29 @@
           var dd = days.get(d);
           if (!dd) { dd = { d: d, bk: 0, cap: 0 }; days.set(d, dd); }
           dd.bk += bk; dd.cap += cap;
-        } else if (pmSet[mk]) {
+        } else if (inPy) {
           runsPy++; bkPy += bk; capPy += cap;
           wdPy[wdi].bk += bk; wdPy[wdi].cap += cap; wdPy[wdi].runs++;
         }
       }
-      if (!runsP) return { name: name, empty: true, months: months };
+      if (!runsP) return { name: name, empty: true, months: months, label: spec.label };
       trains.forEach(function (t) {
         var best = -1, bn = -1;
         t.routes.forEach(function (n, rr) { if (n > bn) { bn = n; best = rr; } });
         t.routeStr = best >= 0 ? cleanStation(occ.routes[best][3]) + ' – ' + cleanStation(occ.routes[best][4]) : '';
         t.occ = t.cap ? t.bk / t.cap : 0;
       });
-      // hálózat (helyjegyes vonatok) ugyanerre az időszakra
-      var netR = routesBy(function (rt, rr, inf) { return inf.kind[rr] === 1; }), net = moSeries(netR);
-      var sumM = function (s, key, ms) { var x = 0; ms.forEach(function (m) { var k = mo.mIdx[m]; if (k !== undefined) x += s[key][k]; }); return x; };
-      var pms = months.map(moPrev);
-      var netOcc = sumM(net, 'cap', months) ? sumM(net, 'bk', months) / sumM(net, 'cap', months) : null;
-      var netBpr = sumM(net, 'runs', months) ? sumM(net, 'bk', months) / sumM(net, 'runs', months) : null;
-      var netBprPy = sumM(net, 'runs', pms) ? sumM(net, 'bk', pms) / sumM(net, 'runs', pms) : null;
-      // bisztró hálózati penetráció
-      var netBz = null;
-      if (bz) {
-        var nt = 0, np = 0;
-        for (var j = 0; j < occ.rowCount; j++) {
-          var o2 = j * STRIDE;
-          if (!mSet[dmKey(R[o2])] || !(bz.tr[j] > 0)) continue;
-          nt += bz.tr[j]; np += R[o2 + 3] + R[o2 + 5] + R[o2 + 13];
-        }
-        netBz = np ? 100 * nt / np : null;
+      // hálózat (helyjegyes vonatok) ugyanerre az időszakra + bisztró-penetráció
+      var nB = 0, nC = 0, nRn = 0, nBy = 0, nRy = 0, nt = 0, np = 0;
+      for (var j = 0; j < occ.rowCount; j++) {
+        var o2 = j * STRIDE, rr = R[o2 + 1], dj = R[o2];
+        if (info.kind[rr] !== 1) continue;
+        var bkj = R[o2 + 3] + R[o2 + 5] + R[o2 + 13];
+        if (spec.dIn[dj]) { nB += bkj; nC += R[o2 + 2] + R[o2 + 4] + R[o2 + 12]; nRn++; if (bz && bz.tr[j] > 0) { nt += bz.tr[j]; np += bkj; } }
+        else if (spec.dPy[dj]) { nBy += bkj; nRy++; }
       }
+      var netOcc = nC ? nB / nC : null, netBpr = nRn ? nB / nRn : null, netBprPy = nRy ? nBy / nRy : null, netBz = np ? 100 * nt / np : null;
+      var pms = months.map(moPrev);
       // pontosság
       var pun = null;
       if (state.punct) {
@@ -10605,7 +10624,7 @@
         cls: AN_CLS.map(function (K) { return { k: K.k, label: K.label, color: K.color, seat: K.seat, bk: P[K.k][0], cap: P[K.k][1], occ: P[K.k][1] ? P[K.k][0] / P[K.k][1] : null, occPy: PY[K.k][1] ? PY[K.k][0] / PY[K.k][1] : null, runs: FULL[K.k][1], full: FULL[K.k][0] }; }).filter(function (c) { return c.cap > 0; }),
         bpr: bkP / runsP, bprPy: runsPy ? bkPy / runsPy : null, shift: shift,
         bike: bikeRunsP ? { runs: bikeRunsP, full: bikeFullP, occ: bikeC ? bikeB / bikeC : 0 } : null,
-        bz: bzPax ? { pen: 100 * bzTr / bzPax, tr: bzTr, net: netBz } : null,
+        bz: bzPax ? { pen: 100 * bzTr / bzPax, tr: bzTr, rev: bzRev, net: netBz } : null, label: spec.label, kind: spec.kind, short: spec.short, per: spec.per,
         net: { occ: netOcc, bpr: netBpr, bprPy: netBprPy }, pun: pun
       };
     }
@@ -10615,14 +10634,14 @@
       var T = {}, sum = [], rec = [];
       var yoy = A.bprPy ? 100 * (A.bpr / A.bprPy - 1) : null, yoyBk = A.bkPy ? 100 * (A.bk / A.bkPy - 1) : null;
       var netYoy = A.net.bprPy ? 100 * (A.net.bpr / A.net.bprPy - 1) : null;
-      var perTxt = A.months.length === 1 ? moLabelLong(A.months[0]) : moLabelLong(A.months[0]) + ' – ' + moLabelLong(A.months[A.months.length - 1]);
+      var perTxt = A.label;
       T.per = perTxt;
       // forgalom
       var mBk = A.months.map(function (m) { var i = A.mo.mIdx[m]; return { m: m, bk: A.M.bk[i], runs: A.M.runs[i] }; }).filter(function (x) { return x.runs; });
       var top = mBk.slice().sort(function (a, b) { return b.bk / b.runs - a.bk / a.runs; }), lowM = top[top.length - 1], hiM = top[0];
-      T.traffic = 'A ' + escHtml(A.name) + ' vonatok ' + perTxt + ' között ' + fmtInt(A.runs) + ' alkalommal közlekedtek, ' + fmtInt(A.bk) + ' helyjegyfoglalással, ami vonatonként átlagosan ' + fmtInt(A.bpr) + ' utas. ' +
-        (yoy !== null ? 'Az előző év azonos időszakához képest a vonatonkénti foglalás ' + anMore(yoy, 'magasabb', 'alacsonyabb') + (yoyBk !== null ? ', az összes foglalás ' + anMore(yoyBk) : '') + (A.runsPy && Math.abs(A.runs / A.runsPy - 1) >= 0.1 ? ' (a közlekedések száma ' + anMore(100 * (A.runs / A.runsPy - 1)) + ': ' + fmtInt(A.runs) + ' a korábbi ' + fmtInt(A.runsPy) + ' helyett – menetrend-változás vagy vonatpótlás)' : '') + (netYoy !== null ? '; a helyjegyes hálózat egészén ugyanez ' + anChg(netYoy) + ', vagyis a vonatnév ' + (Math.abs(yoy - netYoy) < 2 ? 'a hálózattal együtt mozgott' : (yoy > netYoy ? 'jobban teljesített a hálózatnál' : 'elmaradt a hálózattól')) : '') + '. ' : 'Előző évi összevetéshez nincs adat. ') +
-        (hiM && lowM && mBk.length >= 3 ? 'A legerősebb hónap ' + moLabelLong(hiM.m) + ' volt (Ø ' + fmtInt(hiM.bk / hiM.runs) + ' foglalt/vonat), a leggyengébb ' + moLabelLong(lowM.m) + ' (Ø ' + fmtInt(lowM.bk / lowM.runs) + ').' : '');
+      T.traffic = 'A ' + escHtml(A.name) + ' vonatok ' + perTxt + (A.per === 'D' ? ' napon ' : A.per === 'W' ? ' során ' : A.months.length === 1 ? ' hónapban ' : ' között ') + fmtInt(A.runs) + ' alkalommal közlekedtek, ' + fmtInt(A.bk) + ' helyjegyfoglalással, ami vonatonként átlagosan ' + fmtInt(A.bpr) + ' utas. ' +
+        (yoy !== null ? (A.short ? 'Az előző év azonos hétnapjaihoz képest' : 'Az előző év azonos időszakához képest') + ' a vonatonkénti foglalás ' + anMore(yoy, 'magasabb', 'alacsonyabb') + (yoyBk !== null ? ', az összes foglalás ' + anMore(yoyBk) : '') + (A.runsPy && Math.abs(A.runs / A.runsPy - 1) >= 0.1 ? ' (a közlekedések száma ' + anMore(100 * (A.runs / A.runsPy - 1)) + ': ' + fmtInt(A.runs) + ' a korábbi ' + fmtInt(A.runsPy) + ' helyett – menetrend-változás vagy vonatpótlás)' : '') + (netYoy !== null ? '; a helyjegyes hálózat egészén ugyanez ' + anChg(netYoy) + ', vagyis a vonatnév ' + (Math.abs(yoy - netYoy) < 2 ? 'a hálózattal együtt mozgott' : (yoy > netYoy ? 'jobban teljesített a hálózatnál' : 'elmaradt a hálózattól')) : '') + '. ' : 'Előző évi összevetéshez nincs adat. ') +
+        (!A.short && hiM && lowM && mBk.length >= 3 ? 'A legerősebb hónap ' + moLabelLong(hiM.m) + ' volt (Ø ' + fmtInt(hiM.bk / hiM.runs) + ' foglalt/vonat), a leggyengébb ' + moLabelLong(lowM.m) + ' (Ø ' + fmtInt(lowM.bk / lowM.runs) + ').' : '');
       if (yoy !== null) sum.push({ w: Math.abs(yoy) + 5, t: 'Kereslet: vonatonként ' + anChg(yoy) + ' az előző évhez képest' + (netYoy !== null ? ' (hálózat: ' + anChg(netYoy) + ')' : '') + '.' });
       // kihasználtság
       var seatC = A.cls.filter(function (c) { return c.seat; }), sleepC = A.cls.filter(function (c) { return !c.seat; });
@@ -10663,12 +10682,13 @@
         if (s[0].occ - s[s.length - 1].occ > 0.2) rec.push({ w: 6, t: 'Napfüggő összeállítás: ' + AN_WD[s[0].i] + ' (' + anPct(100 * s[0].occ, 0) + ') és ' + AN_WD[s[s.length - 1].i] + ' (' + anPct(100 * s[s.length - 1].occ, 0) + ') között nagy a különbség – a gyenge napokon kisebb, az erős napokon nagyobb egység.' });
       }
       // vonatonként
-      var tl = A.trains.filter(function (t) { return t.runs >= 4; });
-      var hot = tl.filter(function (t) { return t.runs >= 8 && t.hi >= 3 && t.hi / t.runs >= 0.15; }).sort(function (a, b) { return b.hi / b.runs - a.hi / a.runs; });
-      var cold = tl.filter(function (t) { return t.occ < 0.35 && t.runs >= 20; }).sort(function (a, b) { return a.occ - b.occ; });
+      var minR = A.short ? 1 : 4;
+      var tl = A.trains.filter(function (t) { return t.runs >= minR; });
+      var hot = tl.filter(function (t) { return A.short ? (t.hi >= 1 && t.hi / t.runs >= 0.5) : (t.runs >= 8 && t.hi >= 3 && t.hi / t.runs >= 0.15); }).sort(function (a, b) { return b.hi / b.runs - a.hi / a.runs; });
+      var cold = A.short ? [] : tl.filter(function (t) { return t.occ < 0.35 && t.runs >= 20; }).sort(function (a, b) { return a.occ - b.occ; });
       var tdesc = function (t) { return escHtml(t.num) + (t.dep >= 0 ? ' (ind. ' + fmtHhmm(t.dep) + ')' : ''); };
       T.trains = 'A vonatnév ' + tl.length + ' vonatszámon közlekedett. ' +
-        (hot.length ? 'Kapacitáshiány jelei: ' + hot.slice(0, 4).map(function (t) { return tdesc(t) + ' – a közlekedések ' + anPct(100 * t.hi / t.runs, 0) + '-ában legalább 90%-os'; }).join('; ') + '. ' : 'Egyik vonat sem telt meg rendszeresen (a közlekedések legalább 15%-ában 90% fölött). ') +
+        (hot.length ? (A.short ? 'Legalább 90%-os közlekedés: ' : 'Kapacitáshiány jelei: ') + hot.slice(0, A.short ? 8 : 4).map(function (t) { return A.short ? tdesc(t) + (t.runs > 1 ? ' (' + t.hi + '/' + t.runs + ')' : '') : tdesc(t) + ' – a közlekedések ' + anPct(100 * t.hi / t.runs, 0) + '-ában legalább 90%-os'; }).join(A.short ? ', ' : '; ') + '. ' : (A.short ? 'Egyik vonat sem volt 90% fölött. ' : 'Egyik vonat sem telt meg rendszeresen (a közlekedések legalább 15%-ában 90% fölött). ')) +
         (cold.length ? 'Alacsony kihasználtságú: ' + cold.slice(0, 3).map(function (t) { return tdesc(t) + ' (Ø ' + anPct(100 * t.occ, 0) + ')'; }).join(', ') + '.' : '');
       hot.slice(0, 3).forEach(function (t) {
         var wdTop = Array.from(t.wdHi).map(function (n, i) { return { n: n, i: i }; }).filter(function (x) { return x.n > 0; }).sort(function (a, b) { return b.n - a.n; }).slice(0, 2).map(function (x) { return AN_WD[x.i]; });
@@ -10690,7 +10710,7 @@
       }
       // bisztró
       if (A.bz) {
-        T.bz = 'A bisztrókocsiban 100 foglalt utasra ' + fmtDec(A.bz.pen, 1) + ' tranzakció jutott' + (A.bz.net !== null ? ' (hálózati átlag: ' + fmtDec(A.bz.net, 1) + ')' : '') + ', összesen ' + fmtInt(A.bz.tr) + ' tranzakció.';
+        T.bz = 'A bisztrókocsiban 100 foglalt utasra ' + fmtDec(A.bz.pen, 1) + ' tranzakció jutott' + (A.bz.net !== null ? ' (hálózati átlag: ' + fmtDec(A.bz.net, 1) + ')' : '') + ', összesen ' + fmtInt(A.bz.tr) + ' tranzakció, ' + fmtInt(A.bz.rev) + ' Ft bevétel (átlagkosár ' + fmtInt(A.bz.rev / A.bz.tr) + ' Ft).';
         if (A.bz.net && A.bz.pen < 0.75 * A.bz.net) rec.push({ w: 5, t: 'Bisztró: a penetráció (' + fmtDec(A.bz.pen, 1) + ' / 100 utas) jóval a hálózati átlag (' + fmtDec(A.bz.net, 1) + ') alatt – kínálat, nyitvatartás, promóció vizsgálata.' });
       }
       // pontosság
@@ -10770,7 +10790,7 @@
       return '<svg class="chart-svg" viewBox="0 0 ' + W + ' ' + H + '" width="100%" xmlns="http://www.w3.org/2000/svg">' + g + '</svg>';
     }
     function anSvgTrains(A) {
-      var tl = A.trains.filter(function (t) { return t.runs >= 4; }).sort(function (a, b) { return (a.dir - b.dir) || ((a.dep < 0 ? 9999 : a.dep) - (b.dep < 0 ? 9999 : b.dep)) || a.num.localeCompare(b.num); }).slice(0, 36);
+      var tl = A.trains.filter(function (t) { return t.runs >= (A.short ? 1 : 4); }).sort(function (a, b) { return (a.dir - b.dir) || ((a.dep < 0 ? 9999 : a.dep) - (b.dep < 0 ? 9999 : b.dep)) || a.num.localeCompare(b.num); }).slice(0, 36);
       var rowH = 22, W = 860, ml = 250, mr = 120, mt = 22, H = mt + tl.length * rowH + 26;
       var X = function (v) { return ml + v * (W - ml - mr); }, g = '';
       [0, 0.25, 0.5, 0.75, 1].forEach(function (v) { g += '<line x1="' + X(v) + '" x2="' + X(v) + '" y1="' + (mt - 6) + '" y2="' + (H - 22) + '" stroke="' + (v === 0.9 ? '#b45309' : '#e2e8f0') + '"/><text x="' + X(v) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="11" fill="#64748b">' + (v * 100) + '%</text>'; });
@@ -10820,12 +10840,21 @@
       if (!an.per) an.per = 'L12';
       ctl.innerHTML = '<div class="wl-form-row"><span class="control-label">Vonatnév</span><input id="an-name" class="select-control" list="an-names" value="' + escHtml(an.name) + '" autocomplete="off" style="width:220px;">' +
         '<datalist id="an-names">' + names.map(function (n) { return '<option value="' + escHtml(n) + '"></option>'; }).join('') + '</datalist>' +
-        '<span class="control-label">Időszak</span><select id="an-per" class="select-control" style="width:auto;">' + anPeriods().map(function (p) { return '<option value="' + p.v + '"' + (p.v === an.per ? ' selected' : '') + '>' + p.l + '</option>'; }).join('') + '</select>' +
+        '<span class="control-label">Időszak</span><select id="an-per" class="select-control" style="width:auto;">' + anPeriods().concat([{ v: 'M', l: 'Hónap…' }, { v: 'W', l: 'Hét…' }, { v: 'D', l: 'Nap…' }]).map(function (p) { return '<option value="' + p.v + '"' + (p.v === an.per ? ' selected' : '') + '>' + p.l + '</option>'; }).join('') + '</select>' +
         '<button id="an-print" class="btn btn-outline" type="button">🖨 Nyomtatás / PDF</button><button id="an-ppt" class="btn btn-primary" type="button">⬇ PowerPoint</button>' +
         '<button id="an-watch" class="btn btn-outline" type="button">☆ Figyelőlistára</button></div>';
-      var A = anCompute(an.name, an.per);
+      var mosAll = occMonthly().months, lastD = state.occ.dates[state.occ.dates.length - 1], firstD = state.occ.dates[0];
+      if (!an.month || mosAll.indexOf(an.month) < 0) an.month = mosAll[mosAll.length - 1];
+      if (!an.wday || an.wday < firstD || an.wday > lastD) an.wday = lastD;
+      if (!an.day || an.day < firstD || an.day > lastD) an.day = lastD;
+      var extra = an.per === 'M' ? '<select id="an-month" class="select-control" style="width:auto;">' + mosAll.slice().reverse().map(function (m) { return '<option value="' + m + '"' + (m === an.month ? ' selected' : '') + '>' + moLabelLong(m) + '</option>'; }).join('') + '</select>'
+        : an.per === 'W' ? '<input id="an-week" class="select-control" type="date" min="' + firstD + '" max="' + lastD + '" value="' + an.wday + '" title="A hét bármely napja">'
+        : an.per === 'D' ? '<input id="an-day" class="select-control" type="date" min="' + firstD + '" max="' + lastD + '" value="' + an.day + '">' : '';
+      ctl.querySelector('#an-per').insertAdjacentHTML('afterend', extra);
+      var spec = anPeriodSpec(an);
+      var A = anCompute(an.name, spec);
       if (!A || A.empty) {
-        host.innerHTML = '<div class="empty-state" style="padding:24px;">A(z) ' + escHtml(an.name) + ' vonatnévnek nincs közlekedése a választott időszakban.</div>';
+        host.innerHTML = '<div class="empty-state" style="padding:24px;">A(z) ' + escHtml(an.name) + ' vonatnévnek nincs közlekedése a választott időszakban (' + (A ? A.label : '') + ').</div>';
       } else {
         var T = anText(A);
         state.anLast = { A: A, T: T };
@@ -10836,8 +10865,9 @@
           '<div><span>Ülőhely-kihasználtság</span><strong>' + anPct(100 * A.occ) + '</strong><em>' + (A.net.occ !== null ? 'hálózat: ' + anPct(100 * A.net.occ) : '') + '</em></div>' +
           '<div><span>Közlekedés / vonatszám</span><strong>' + fmtInt(A.runs) + '</strong><em>' + A.trains.length + ' vonatszám</em></div>' +
           A.cls.filter(function (c) { return c.k === 'p' || !c.seat; }).map(function (c) { return '<div><span>' + c.label + ' kihasználtság</span><strong>' + anPct(100 * c.occ) + '</strong><em>' + (c.occPy !== null ? 'előző év: ' + anPct(100 * c.occPy) : '') + '</em></div>'; }).join('') +
+          (A.bz ? '<div><span>Bisztró eladás</span><strong>' + fmtInt(A.bz.tr) + '</strong><em>' + fmtDec(A.bz.pen, 1) + ' / 100 utas' + (A.bz.net !== null ? ' (hálózat ' + fmtDec(A.bz.net, 1) + ')' : '') + ' • ' + (A.bz.rev >= 1e6 ? fmtDec(A.bz.rev / 1e6, 1) + ' M Ft' : fmtInt(A.bz.rev) + ' Ft') + '</em></div>' : '') +
           (A.pun ? '<div><span>Pontosság</span><strong>' + anPct(A.pun.p) + '</strong><em>' + (A.pun.net !== null ? 'hálózat: ' + anPct(A.pun.net) : '') + '</em></div>' : '') + '</div>';
-        var h = '<div class="an-head"><div class="an-kicker">Vonatnév-elemzés</div><h2>' + escHtml(A.name) + hybBadge(A.name) + '</h2><div class="an-sub">' + T.per + ' • összevetés: előző év azonos hónapjai • készült: ' + todayHu() + '</div></div>' + kp;
+        var h = '<div class="an-head"><div class="an-kicker">Vonatnév-elemzés</div><h2>' + escHtml(A.name) + hybBadge(A.name) + '</h2><div class="an-sub">' + T.per + ' • összevetés: előző év ' + (A.short ? 'azonos hétnapjai' : 'azonos hónapjai') + ' • készült: ' + todayHu() + '</div></div>' + kp;
         h += hybNote([A.name], false);
         h += '<section class="an-sec an-sum"><h3>Összefoglaló</h3><ul>' + T.sum.map(function (s) { return '<li>' + s + '</li>'; }).join('') + '</ul></section>';
         h += anSection('traffic', 'Forgalom', T.traffic, anSvgMonthly(A), '<span><i style="background:#0b2e59"></i>foglalt utas / vonat</span><span><i class="dash"></i>előző év</span><span><i style="background:#dbeafe"></i>vizsgált időszak</span>');
@@ -10861,6 +10891,10 @@
         an.name = hit; renderAnalysis();
       });
       document.getElementById('an-per').addEventListener('change', function (e) { an.per = e.target.value; renderAnalysis(); });
+      var amo = document.getElementById('an-month'), awk = document.getElementById('an-week'), ady = document.getElementById('an-day');
+      if (amo) amo.addEventListener('change', function (e) { an.month = e.target.value; renderAnalysis(); });
+      if (awk) awk.addEventListener('change', function (e) { if (e.target.value) { an.wday = e.target.value; renderAnalysis(); } });
+      if (ady) ady.addEventListener('change', function (e) { if (e.target.value) { an.day = e.target.value; renderAnalysis(); } });
       document.getElementById('an-print').addEventListener('click', docPrint);
       document.getElementById('an-ppt').addEventListener('click', function () { anPptx().catch(function (err) { showToast('PowerPoint-hiba: ' + err.message, 'error'); }); });
       document.getElementById('an-watch').addEventListener('click', function () { watchPrefill('name', an.name); });
