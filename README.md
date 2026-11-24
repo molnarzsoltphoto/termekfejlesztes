@@ -39,3 +39,9 @@ Időszak (utolsó 12 hónap vagy naptári év) és évszak szerint szűrhető; p
 ## Havi összesítő más alkalmazásoknak (Abigél)
 
 A szerkesztő mentéskor a `havi-riport.html`-be egy kis, tömörítetlen JSON-blokkot is ír (`id="riport-summary"`): havonta, szekciónként (vonatnév, vonatnem, helyjegyes busz viszonylat, napijegy) foglalás, kapacitás, járatszám, kerékpár és bisztró-tranzakció. Abigél üzleti eset paneljét („Mért utasszám a TEKNO havi riportból”) ez táplálja, így a havi frissítés után ott is automatikusan az új számok látszanak.
+
+## Kerékpárjegy-térkép, időszakszűrés, Excel-export (2026. november)
+
+- **Kerékpárjegy-eladások** (szerkesztő, 6. mező, `.xlsx`): a szolgálati hely szerinti havi kimutatás. A hónapot a kimutatás szűrő-szövegéből olvassa, több hónap egymás után betölthető. A 4. fül kerékpár-részében térképen jelenik meg (ország / Budapest környéke). Az állomáskoordináták a `mav-stations` adatcsomagból (ISC licenc) vannak beépítve; az ügyfélszolgálati irodák és buszállomások a településük állomásához kerülnek. Az online (E-Ticket) eladás helyhez nem köthető.
+- **Kínálatfejlesztési jelzések** időszaka: utolsó 12 hónap, év, hónap, hét vagy nap. Rövid időszaknál a küszöbök arányosan kisebbek.
+- **Excel-export**: az Export ablakban „Excel (.xlsx)” formátum. Minden kijelölt elem külön munkalap, a táblázatok teljes terjedelemben, a grafikonok mögötti adatsorokkal; a számok számként kerülnek át.
