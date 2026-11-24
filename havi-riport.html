@@ -10996,11 +10996,18 @@
       s.runsDay = s.dataDays ? s.runs / s.dataDays : null;
       return s;
     }
+    // A napijegy-adat havi: a szezonnal átfedő hónapok átfedő napjaival súlyozott havi átlag (perMonth) és arányosított szezonösszeg (sum)
     function balPass(from, to) {
       if (!state.pass || !state.pass.length) return null;
-      var s = 0, n = 0;
-      state.pass.forEach(function (r) { if (r.date >= from && r.date <= to) { s += r.balOssz || 0; n++; } });
-      return n ? { sum: s, perDay: s / n, days: n } : null;
+      var f = Date.parse(from + 'T00:00:00Z'), tt = Date.parse(to + 'T00:00:00Z'), w = 0, ws = 0, sum = 0, months = 0;
+      state.pass.forEach(function (r) {
+        var m0 = Date.UTC(r.year, r.month - 1, 1), m1 = Date.UTC(r.year, r.month, 0), dim = Math.round((m1 - m0) / 86400000) + 1;
+        var ov = Math.round((Math.min(m1, tt) - Math.max(m0, f)) / 86400000) + 1;
+        if (ov <= 0) return;
+        var v = r.balOssz || 0;
+        ws += v * ov; w += ov; sum += v * ov / dim; months++;
+      });
+      return w ? { perMonth: ws / w, sum: sum, months: months } : null;
     }
     function balYearsWithData() {
       var ds = state.occ.dates, first = ds[0], last = ds[ds.length - 1];
@@ -11084,7 +11091,7 @@
           ', ' + fmtDec(s.runsDay, 0) + ' közlekedés naponta; a közlekedések ' + anPct(s.runs ? 100 * s.hi / s.runs : 0) + '-a volt legalább 90%-os' +
           (s.cp ? '; prémium: ' + anPct(100 * s.occP) + (p && p.occP !== null ? ' (' + anPp(100 * (s.occP - p.occP)) + ')' : '') + ', a prémiumos közlekedések ' + anPct(100 * s.premFull / s.premRuns, 0) + '-ában legalább 90%' : '') +
           (s.bikeC ? '; kerékpár: ' + fmtInt(s.bikePerDay) + ' kerékpárhely-foglalás naponta' + (p && p.bikePerDay ? ' (' + anChg(balChg(s.bikePerDay, p.bikePerDay)) + ')' : '') + ', ' + anPct(100 * s.bikeOcc) + ' kihasználtság' + (p && p.bikeOcc !== null ? ' (' + anPp(100 * (s.bikeOcc - p.bikeOcc)) + ')' : '') + ', a kerékpáros vonatok ' + anPct(100 * s.bikeFull / s.bikeRuns) + '-án megtelt' : '') +
-          (s.pass && !noPass ? '; Balaton24 napijegy: ' + fmtInt(s.pass.perDay) + ' / nap' + (p && p.pass ? ' (' + anChg(balChg(s.pass.perDay, p.pass.perDay)) + ')' : '') : '') + (s.complete ? '' : ' – az adat hiányos') + '.');
+          (s.pass && !noPass ? '; Balaton24 napijegy: ' + fmtInt(s.pass.perMonth) + ' / hó' + (p && p.pass ? ' (' + anChg(balChg(s.pass.perMonth, p.pass.perMonth)) + ')' : '') : '') + (s.complete ? '' : ' – az adat hiányos') + '.');
         if (ch !== null) sum.push({ w: Math.abs(ch) + (sb.k === 'fo' ? 5 : 0), t: sb.l + ': ' + fmtInt(s.perDay) + ' foglalás / nap (' + anChg(ch) + '), kihasználtság ' + anPct(100 * s.occ, 0) + (dOcc !== null ? ' (' + anPp(dOcc) + ')' : '') +
           (s.cp ? '; prémium ' + anPct(100 * s.occP, 0) + (p && p.occP !== null ? ' (' + anPp(100 * (s.occP - p.occP)) + ')' : '') : '') +
           (s.bikeC ? '; kerékpár ' + fmtInt(s.bikePerDay) + ' / nap' + (p && p.bikePerDay ? ' (' + anChg(balChg(s.bikePerDay, p.bikePerDay)) + ')' : '') : '') + '.' });
@@ -11159,8 +11166,9 @@
           row('Kerékpárhely-foglalás / nap', function (s, p) { return s.bikePerDay === null ? '—' : fmtInt(s.bikePerDay) + (p && p.bikePerDay ? ' <span class="bs-chg">' + anChg(balChg(s.bikePerDay, p.bikePerDay)) + '</span>' : ''); }) +
           row('Kerékpárhely-kihasználtság', function (s, p) { return s.bikeOcc === null ? '—' : anPct(100 * s.bikeOcc) + (p && p.bikeOcc !== null ? ' <span class="bs-chg">' + anPp(100 * (s.bikeOcc - p.bikeOcc)).replace(' százalékpont', ' %p') + '</span>' : ''); }) +
         row('Kerékpárhely tele', function (s) { return s.bikeRuns ? fmtInt(s.bikeFull) + ' (' + anPct(100 * s.bikeFull / s.bikeRuns, 0) + ')' : '—'; }) : '') +
-        '<tr class="bs-grp"><th colspan="4">Turisztikai napijegy</th></tr>' + row('Balaton24 napijegy / nap', function (s, p) { return s.pass ? fmtInt(s.pass.perDay) + (p && p.pass ? ' <span class="bs-chg">' + anChg(balChg(s.pass.perDay, p.pass.perDay)) + '</span>' : '') : '—'; }) +
-        '</tbody></table></div><p class="fc-small">Zárójelben / szürkével: változás ' + prev + ' azonos szezonjához (a napi és vonatonkénti értékek a szezonhossz-különbséget kiszűrik).</p></section>';
+        '<tr class="bs-grp"><th colspan="4">Turisztikai napijegy</th></tr>' + row('Balaton24 napijegy / hó', function (s, p) { return s.pass ? fmtInt(s.pass.perMonth) + (p && p.pass ? ' <span class="bs-chg">' + anChg(balChg(s.pass.perMonth, p.pass.perMonth)) + '</span>' : '') : '—'; }) +
+        row('Balaton24 a szezonban (arányosítva)', function (s) { return s.pass ? fmtInt(s.pass.sum) : '—'; }) +
+        '</tbody></table></div><p class="fc-small">Zárójelben / szürkével: változás ' + prev + ' azonos szezonjához (a napi és vonatonkénti értékek a szezonhossz-különbséget kiszűrik). A Balaton24 napijegy havi adat: a szezonnal átfedő hónapok átfedő napjaival súlyozott havi átlag, a szezonösszeg ugyanígy arányosítva.</p></section>';
       h += '<section class="an-sec an-sum"><h3>Összefoglaló</h3><ul>' + (tx.sum.length ? tx.sum : ['Előző évi összevetéshez nincs adat.']).map(function (s) { return '<li>' + s + '</li>'; }).join('') + '</ul></section>';
       h += anSection('bs-daily', 'Napi forgalom a szezonban', tx.lines.join(' '), balSvgDaily(D, year), '<span><i style="background:#0b2e59"></i>' + year + '</span><span><i class="dash"></i>' + prev + ' (azonos hétnapok)</span><span><i style="background:#ecfdf5;border:1px solid #a7f3d0"></i>elő</span><span><i style="background:#eff6ff;border:1px solid #bfdbfe"></i>fő</span><span><i style="background:#fffbeb;border:1px solid #fde68a"></i>utószezon</span>');
       h += anSection('bs-perday', 'Foglalás naponta – évek összevetése', 'A szezonok hossza évente eltér, ezért a napi átlag a mérvadó.', balSvgGroups(T, function (s) { return s.perDay; }, '', 'foglalás / nap'), balYearLegend(T));
