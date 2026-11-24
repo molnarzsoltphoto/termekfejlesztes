@@ -2166,12 +2166,12 @@
         <div id="dz-bikeod" class="dropzone">
           <div class="dropzone-top">
             <div>
-              <div class="dropzone-title">7. Kerékpárjegyek jegy-szinten – R155 riport (opcionális, <code>.csv</code>)</div>
-              <div class="dropzone-desc">Az „R155 – Ért. kesítési rekord riport” CSV-je (egy sor = egy jegy, KIINDULO_ALLOMAS, CELALLOMAS). Viszonylatokká összesítve kerül a kerékpár-térképre; a sztornózott és visszatérített jegyek kimaradnak. Havonta egy fájl.</div>
+              <div class="dropzone-title">7. Kerékpárjegyek jegy-szinten – R155 riport (opcionális, <code>.csv</code> / <code>.zip</code>)</div>
+              <div class="dropzone-desc">Az „R155 – Értékesítési rekord riport” CSV-je (egy sor = egy jegy, KIINDULO_ALLOMAS, CELALLOMAS). Egy fájlban több év is lehet: a hónapot az értékesítés időpontjából veszi, a fájlban lévő hónapokat felülírja. Nagy fájl is mehet (a böngésző darabonként olvassa, semmi nem megy fel a szerverre), tömörítve is: <code>.zip</code> vagy <code>.gz</code>. Excelt ne: az legfeljebb 1 048 576 sort tud, a többit levágja. Viszonylatokká összesítve kerül a kerékpár-térképre; a sztornózott és visszatérített jegyek kimaradnak.</div>
             </div>
             <label class="btn btn-primary" style="cursor:pointer;">
               Fájl kiválasztása
-              <input id="input-bikeod" type="file" accept=".csv,.txt" class="hidden">
+              <input id="input-bikeod" type="file" accept=".csv,.txt,.zip,.gz" class="hidden">
             </label>
           </div>
           <div id="status-bikeod" class="dropzone-status hidden"></div>
@@ -8317,57 +8317,171 @@
     var BIKE_CH_LABEL = { 'APP-2025': 'MÁV app', 'JKA': 'Jegykiadó automata', 'belföldi pénztár': 'Belföldi pénztár', 'nemzetközi pénztár': 'Nemzetközi pénztár',
       'internet': 'Internet (E-Ticket)', 'fedélzet': 'Fedélzeten', 'partner': 'Partner', 'VIM': 'VIM' };
 
-    // CSV (R155: egy sor = egy jegy) → { month, pairs: [[honnan, hová, db, utaskm, Ft]], channels, storno, refund }
-    function parseBikeOdRows(rows) {
-      var h = rows[0].map(function (x) { return bikeKey(x); });
+    // R155 (egy sor = egy jegy) → hónaponként { month, pairs: [[honnan, hová, db, utaskm, Ft]], channels, storno, refund }
+    // A hónap az értékesítés időpontjából jön, így egy fájlban több év is lehet. A fájlt darabonként olvassa (900 MB-os CSV is),
+    // .zip és .gz tömörítve is.
+    function bikeOdNewAcc(header) {
+      var h = header.map(function (x) { return bikeKey(x); });
       var c = function (n) { return h.indexOf(n); };
-      var cFrom = c('kiinduloallomas'), cTo = c('celallomas'), cKm = c('tavolsagkm'), cN = c('tenylegesutasszam'), cRev = c('ajanlatertfizetendo');
-      var cSt = c('sztorno'), cRf = c('visszateritett'), cCh = c('ertekesitesicsatorna'), cPer = c('textbox94'), cTime = c('ertekesitesidopontja');
-      if (cFrom < 0 || cTo < 0) throw new Error('Nem találom a KIINDULO_ALLOMAS / CELALLOMAS oszlopot. Az R155 jegy-szintű riportot várom CSV-ben.');
-      var pairs = new Map(), ch = new Map(), storno = 0, refund = 0, month = null;
-      var nm = function (v) { var f = parseFloat(String(v || '').replace(/[\s ]/g, '').replace(',', '.')); return Number.isFinite(f) ? f : 0; };
-      for (var i = 1; i < rows.length; i++) {
-        var r = rows[i];
-        if (!r || r.length < h.length - 2 || !r[cFrom]) continue;
-        if (month === null) {
-          var m = (cPer >= 0 ? String(r[cPer]) : '').match(/(\d{4})\.\s*(\d{2})\.\s*\d{2}\./) || (cTime >= 0 ? String(r[cTime]) : '').match(/(\d{4})\.(\d{2})\.\d{2}/);
-          if (m) month = m[1] + '-' + m[2];
-        }
-        if (cSt >= 0 && String(r[cSt]).trim() === 'Igen') { storno++; continue; }
-        if (cRf >= 0 && String(r[cRf]).trim() === 'Igen') { refund++; continue; }
-        var n = cN >= 0 ? Math.trunc(nm(r[cN])) : 1;
-        if (!(n > 0)) n = 1;
-        var k = String(r[cFrom]).trim() + '\u0001' + String(r[cTo]).trim();
-        var e = pairs.get(k);
-        if (!e) { e = [0, 0, 0]; pairs.set(k, e); }
-        e[0] += n; e[1] += nm(r[cKm]) * n; e[2] += nm(r[cRev]);
-        var chn = cCh >= 0 ? String(r[cCh]).trim() : '?';
-        ch.set(chn, (ch.get(chn) || 0) + n);
-      }
-      if (!month) throw new Error('Nem találom a riport időszakát (Textbox94 vagy ERTEKESITES_IDOPONTJA).');
-      var out = [];
-      pairs.forEach(function (v, k) { var ab = k.split('\u0001'); out.push([ab[0], ab[1], v[0], Math.round(v[1]), Math.round(v[2])]); });
+      var A = { n: h.length, cFrom: c('kiinduloallomas'), cTo: c('celallomas'), cKm: c('tavolsagkm'), cN: c('tenylegesutasszam'), cRev: c('ajanlatertfizetendo'),
+        cSt: c('sztorno'), cRf: c('visszateritett'), cCh: c('ertekesitesicsatorna'), cPer: c('textbox94'), cTime: c('ertekesitesidopontja'), months: new Map(), rows: 0, skipped: 0 };
+      if (A.cFrom < 0 || A.cTo < 0) throw new Error('Nem találom a KIINDULO_ALLOMAS / CELALLOMAS oszlopot. Az R155 jegy-szintű riportot várom CSV-ben.');
+      return A;
+    }
+    function bikeOdNum(v) { var f = parseFloat(String(v || '').replace(/[\s ]/g, '').replace(',', '.')); return Number.isFinite(f) ? f : 0; }
+    function bikeOdRow(A, r) {
+      if (!r || r.length < A.n - 2 || !r[A.cFrom]) { A.skipped++; return; }
+      var m = (A.cTime >= 0 ? String(r[A.cTime]) : '').match(/(\d{4})\.\s*(\d{2})\./) || (A.cPer >= 0 ? String(r[A.cPer]) : '').match(/(\d{4})\.\s*(\d{2})\.\s*\d{2}\./);
+      if (!m) { A.skipped++; return; }
+      var mo = m[1] + '-' + m[2], d = A.months.get(mo);
+      if (!d) { d = { pairs: new Map(), ch: new Map(), storno: 0, refund: 0 }; A.months.set(mo, d); }
+      A.rows++;
+      if (A.cSt >= 0 && String(r[A.cSt]).trim() === 'Igen') { d.storno++; return; }
+      if (A.cRf >= 0 && String(r[A.cRf]).trim() === 'Igen') { d.refund++; return; }
+      var n = A.cN >= 0 ? Math.trunc(bikeOdNum(r[A.cN])) : 1;
+      if (!(n > 0)) n = 1;
+      var k = String(r[A.cFrom]).trim() + '\u0001' + String(r[A.cTo]).trim();
+      var e = d.pairs.get(k);
+      if (!e) { e = [0, 0, 0]; d.pairs.set(k, e); }
+      e[0] += n; e[1] += bikeOdNum(r[A.cKm]) * n; e[2] += bikeOdNum(r[A.cRev]);
+      var chn = A.cCh >= 0 ? String(r[A.cCh]).trim() : '?';
+      d.ch.set(chn, (d.ch.get(chn) || 0) + n);
+    }
+    function bikeOdFinish(A) {
       var cmp = function (a, b) { return a < b ? -1 : (a > b ? 1 : 0); };
-      out.sort(function (a, b) { return b[2] - a[2] || cmp(a[0], b[0]) || cmp(a[1], b[1]); });
-      var chs = Array.from(ch.entries()).sort(function (a, b) { return b[1] - a[1] || cmp(a[0], b[0]); });
-      return { month: month, pairs: out, channels: chs, storno: storno, refund: refund };
+      var res = {};
+      A.months.forEach(function (d, mo) {
+        var out = [];
+        d.pairs.forEach(function (v, k) { var ab = k.split('\u0001'); out.push([ab[0], ab[1], v[0], Math.round(v[1]), Math.round(v[2])]); });
+        out.sort(function (a, b) { return b[2] - a[2] || cmp(a[0], b[0]) || cmp(a[1], b[1]); });
+        res[mo] = { month: mo, pairs: out, channels: Array.from(d.ch.entries()).sort(function (a, b) { return b[1] - a[1] || cmp(a[0], b[0]); }), storno: d.storno, refund: d.refund };
+      });
+      return res;
+    }
+    // Kis fájlra, tesztekhez: sortömbből
+    function parseBikeOdRows(rows) {
+      var A = bikeOdNewAcc(rows[0]);
+      for (var i = 1; i < rows.length; i++) bikeOdRow(A, rows[i]);
+      return bikeOdFinish(A);
     }
 
-    async function handleBikeOdFile(file, buf, dz, statusEl) {
-      var dec = decodeHungarianCsv(buf);
-      var rows = parseCsvRows(dec.text, detectDelimiter(dec.text));
-      var res = parseBikeOdRows(rows);
+    function u32le(b, o) { return (b[o] | (b[o + 1] << 8) | (b[o + 2] << 16)) + b[o + 3] * 16777216; }
+    function u16le(b, o) { return b[o] | (b[o + 1] << 8); }
+    // A fájl tartalma bájtfolyamként: sima CSV, .gz vagy .zip (a legnagyobb .csv/.txt bejegyzés)
+    async function bikeOdSource(file) {
+      if (/\.xls[xm]?$/i.test(file.name)) throw new Error('Excelből nem töltöm be: az Excel legfeljebb 1 048 576 sort tud, a nagy R155-export ott csonka. A CSV-t töltsd be (tömörítve is lehet: .zip vagy .gz).');
+      var sig = new Uint8Array(await file.slice(0, 4).arrayBuffer());
+      if (sig[0] === 0x1f && sig[1] === 0x8b) return { stream: file.stream().pipeThrough(new DecompressionStream('gzip')), total: 0, label: 'gz' };
+      if (sig[0] === 0x50 && sig[1] === 0x4b && sig[2] === 3 && sig[3] === 4) {
+        var tailLen = Math.min(file.size, 65557), tail = new Uint8Array(await file.slice(file.size - tailLen).arrayBuffer()), eo = -1;
+        for (var i = tail.length - 22; i >= 0; i--) if (tail[i] === 0x50 && tail[i + 1] === 0x4b && tail[i + 2] === 5 && tail[i + 3] === 6) { eo = i; break; }
+        if (eo < 0) throw new Error('Sérült .zip fájl (nincs tartalomjegyzék).');
+        var cdSize = u32le(tail, eo + 12), cdOff = u32le(tail, eo + 16);
+        if (cdOff === 0xffffffff) throw new Error('A 4 GB fölötti (ZIP64) tömörítést nem támogatom – a CSV-t tömörítsd .gz-be vagy 7-Zippel sima .zip-be.');
+        var cd = new Uint8Array(await file.slice(cdOff, cdOff + cdSize).arrayBuffer()), p = 0, best = null;
+        while (p + 46 <= cd.length && u32le(cd, p) === 0x02014b50) {
+          var nl = u16le(cd, p + 28), xl = u16le(cd, p + 30), cl = u16le(cd, p + 32);
+          var nm = new TextDecoder('utf-8').decode(cd.subarray(p + 46, p + 46 + nl));
+          var ent = { name: nm, method: u16le(cd, p + 10), csize: u32le(cd, p + 20), usize: u32le(cd, p + 24), off: u32le(cd, p + 42) };
+          if (/\.(csv|txt)$/i.test(nm) && (!best || ent.usize > best.usize)) best = ent;
+          p += 46 + nl + xl + cl;
+        }
+        if (!best) throw new Error('A .zip-ben nincs .csv fájl.');
+        if (best.csize === 0xffffffff || best.off === 0xffffffff) throw new Error('A 4 GB fölötti (ZIP64) tömörítést nem támogatom.');
+        var lh = new Uint8Array(await file.slice(best.off, best.off + 30).arrayBuffer());
+        var start = best.off + 30 + u16le(lh, 26) + u16le(lh, 28);
+        var raw = file.slice(start, start + best.csize).stream();
+        if (best.method === 0) return { stream: raw, total: best.usize, label: 'zip' };
+        if (best.method !== 8) throw new Error('Ismeretlen tömörítési mód a .zip-ben (' + best.method + '). Sima „Tömörített mappa” vagy 7-Zip zip kell.');
+        return { stream: raw.pipeThrough(new DecompressionStream('deflate-raw')), total: best.usize, label: 'zip' };
+      }
+      return { stream: file.stream(), total: file.size, label: 'csv' };
+    }
+
+    function csvSplitLine(line, d) {
+      if (line.indexOf('"') < 0) return line.split(d);
+      var out = [], cur = '', q = false;
+      for (var i = 0; i < line.length; i++) {
+        var ch = line[i];
+        if (q) {
+          if (ch === '"') { if (line[i + 1] === '"') { cur += '"'; i++; } else q = false; }
+          else cur += ch;
+        } else if (ch === '"') q = true;
+        else if (ch === d) { out.push(cur); cur = ''; }
+        else cur += ch;
+      }
+      out.push(cur);
+      return out;
+    }
+
+    async function streamBikeOd(file, onProgress) {
+      var src = await bikeOdSource(file);
+      var reader = src.stream.getReader(), dec = null, fatal = new TextDecoder('utf-8', { fatal: true }), enc = 'UTF-8';
+      var carry = '', pend = '', A = null, delim = ',', done = 0, lastT = 0, first = true;
+      var line = function (ln) {
+        if (pend) { ln = pend + '\n' + ln; pend = ''; }
+        var qn = 0;
+        for (var i = ln.indexOf('"'); i >= 0; i = ln.indexOf('"', i + 1)) qn++;
+        if (qn % 2) { pend = ln; return; }                     // idézőjelen belüli sortörés: a következő sorral együtt
+        if (ln.charCodeAt(ln.length - 1) === 13) ln = ln.slice(0, -1);
+        if (!A) {
+          if (!ln.trim()) return;
+          if (ln.charCodeAt(0) === 0xfeff) ln = ln.slice(1);
+          delim = (ln.split(';').length > ln.split(',').length) ? ';' : (ln.indexOf('\t') >= 0 && ln.indexOf(',') < 0 ? '\t' : ',');
+          A = bikeOdNewAcc(csvSplitLine(ln, delim));
+          return;
+        }
+        if (ln) bikeOdRow(A, csvSplitLine(ln, delim));
+      };
+      for (;;) {
+        var rd = await reader.read();
+        if (rd.done) break;
+        var chunk = rd.value, text;
+        done += chunk.length;
+        if (first) {
+          first = false;
+          try { text = fatal.decode(chunk, { stream: true }); dec = fatal; }
+          catch (e) { dec = new TextDecoder('windows-1250'); enc = 'Windows-1250'; text = dec.decode(chunk, { stream: true }); }
+        } else {
+          try { text = dec.decode(chunk, { stream: true }); }
+          catch (e) { dec = new TextDecoder('utf-8'); text = dec.decode(chunk, { stream: true }); }
+        }
+        var parts = (carry + text).split('\n');
+        carry = parts.pop();
+        for (var i = 0; i < parts.length; i++) line(parts[i]);
+        var now = Date.now();
+        if (now - lastT > 400) { lastT = now; onProgress(done, src.total, A ? A.rows : 0); await new Promise(function (r) { setTimeout(r, 0); }); }
+      }
+      carry += dec ? dec.decode() : '';
+      if (carry) line(carry);
+      if (pend) line('');
+      if (!A) throw new Error('Üres fájl.');
+      if (!A.months.size) throw new Error('Nem találom az értékesítés időpontját (ERTEKESITES_IDOPONTJA) egyetlen sorban sem.');
+      return { months: bikeOdFinish(A), rows: A.rows, skipped: A.skipped, encoding: enc, label: src.label };
+    }
+
+    async function handleBikeOdFile(file, dz, statusEl) {
+      var mb = function (x) { return (x / 1048576).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' MB'; };
+      var res = await streamBikeOd(file, function (done, total, rows) {
+        statusEl.textContent = 'Feldolgozás: ' + file.name + ' – ' + (total ? Math.min(99, Math.floor(100 * done / total)) + '% (' + mb(done) + ' / ' + mb(total) + ')' : mb(done)) + ', ' + fmtInt(rows) + ' jegy...';
+      });
       state.bikeOD = state.bikeOD || { months: {} };
-      state.bikeOD.months[res.month] = res;
-      var tot = res.pairs.reduce(function (a, p) { return a + p[2]; }, 0);
+      var keys = Object.keys(res.months).sort(), tot = 0, st = 0, rf = 0;
+      keys.forEach(function (k) {
+        var m = res.months[k];
+        state.bikeOD.months[k] = m;
+        tot += m.pairs.reduce(function (a, p) { return a + p[2]; }, 0); st += m.storno; rf += m.refund;
+      });
+      var ml = function (k) { return k.replace('-', '. ') + '.'; };
       dz.classList.add('loaded');
       statusEl.style.color = 'var(--emerald)';
-      statusEl.textContent = '✓ ' + res.month.replace('-', '. ') + '.: ' + fmtInt(tot) + ' jegy, ' + fmtInt(res.pairs.length) + ' irányos viszonylat' +
-        (res.storno || res.refund ? ' • kihagyva: ' + res.storno + ' sztornó, ' + res.refund + ' visszatérített' : '') + ' • betöltött hónapok: ' + Object.keys(state.bikeOD.months).length;
+      statusEl.textContent = '✓ ' + (keys.length > 1 ? ml(keys[0]) + ' – ' + ml(keys[keys.length - 1]) + ' (' + keys.length + ' hónap)' : ml(keys[0])) + ': ' + fmtInt(tot) + ' kerékpárjegy' +
+        (st || rf ? ' • kihagyva: ' + fmtInt(st) + ' sztornó, ' + fmtInt(rf) + ' visszatérített' : '') + (res.skipped ? ' • ' + fmtInt(res.skipped) + ' hiányos sor' : '') +
+        ' • betöltött hónapok összesen: ' + Object.keys(state.bikeOD.months).length + (keys.length > 1 ? ' (a fájlban lévő hónapok felülírva)' : '');
       state.t4.bikeLayer = 'od';
-      state.t4.bikeMonth = res.month;
+      state.t4.odSel = keys.length > 1 ? 'L12' : keys[0];
       state.isDemo = false;
-      showToast('Kerékpárjegy-viszonylatok betöltve (' + res.month + ')', 'success');
+      showToast('Kerékpárjegy-viszonylatok betöltve: ' + keys.length + ' hónap', 'success');
     }
 
     function bikeOdMonths() { return state.bikeOD && state.bikeOD.months ? Object.keys(state.bikeOD.months).sort().reverse() : []; }
@@ -8378,9 +8492,37 @@
       return _bikeMatchCache.get(name);
     }
 
+    // 'YYYY-MM' | 'YYYY' (naptári év) | 'L12' (utolsó 12 betöltött naptári hónap) | 'all'
+    function bikeOdSelMonths(sel) {
+      var all = Object.keys(state.bikeOD.months).sort();
+      if (sel === 'all') return all;
+      if (sel === 'L12') {
+        var last = all[all.length - 1], y = parseInt(last.slice(0, 4), 10), m = parseInt(last.slice(5), 10);
+        var from = (m === 12 ? y : y - 1) + '-' + String(m === 12 ? 1 : m + 1).padStart(2, '0');
+        return all.filter(function (k) { return k >= from; });
+      }
+      if (/^\d{4}$/.test(sel)) return all.filter(function (k) { return k.slice(0, 4) === sel; });
+      return [sel];
+    }
+    function bikeOdSelOk(sel) {
+      var all = bikeOdMonths();
+      if (!sel || !all.length) return false;
+      if (sel === 'all' || sel === 'L12') return all.length > 1;
+      return /^\d{4}$/.test(sel) ? all.some(function (k) { return k.slice(0, 4) === sel; }) : all.indexOf(sel) >= 0;
+    }
+    function bikeOdSelLabel(sel) {
+      var hm = function (m) { return m.slice(0, 4) + '. ' + MONTHS_FULL[parseInt(m.slice(5), 10) - 1].toLowerCase(); };
+      if (sel === 'all' || sel === 'L12') {
+        var ks = bikeOdSelMonths(sel);
+        return (sel === 'all' ? 'Összes betöltött hónap' : 'Utolsó 12 hónap') + ' (' + hm(ks[0]) + ' – ' + hm(ks[ks.length - 1]) + ')';
+      }
+      if (/^\d{4}$/.test(sel)) { var n = bikeOdSelMonths(sel).length; return sel + ' (' + (n === 12 ? 'egész év' : n + ' hónap') + ')'; }
+      return hm(sel);
+    }
+
     function bikeOdAgg(month) {
       var M = state.bikeOD.months;
-      var ms = month === 'all' ? Object.keys(M) : [month];
+      var ms = bikeOdSelMonths(month);
       var und = new Map(), vol = new Map(), ch = new Map(), tot = { db: 0, km: 0, rev: 0 }, unm = new Map(), storno = 0, refund = 0;
       ms.forEach(function (mo) {
         var d = M[mo];
@@ -8486,13 +8628,20 @@
 
     function renderBikeOD(host) {
       var t4 = state.t4, ms = bikeOdMonths();
-      if (!t4.bikeMonth || (t4.bikeMonth !== 'all' && ms.indexOf(t4.bikeMonth) < 0)) t4.bikeMonth = ms[0];
-      if (t4.pmode === 'month' && ms.indexOf(t4.month) >= 0 && t4._bikeAuto !== t4.month) { t4.bikeMonth = t4.month; t4._bikeAuto = t4.month; }
-      var agg = bikeOdAgg(t4.bikeMonth);
-      var monthLbl = function (m) { return m === 'all' ? 'Összes betöltött hónap' : m.slice(0, 4) + '. ' + MONTHS_FULL[parseInt(m.slice(5), 10) - 1].toLowerCase(); };
+      // a 4. fül időszakszűrőjét követi, amíg a felhasználó a listában mást nem választ
+      var auto = t4.pmode === 'month' ? t4.month : t4.pmode === 'year' ? String(t4.year || '') : t4.pmode === 'last12' ? 'L12' : '';
+      var autoSig = t4.pmode + '|' + auto;
+      if (auto && t4._odAuto !== autoSig && bikeOdSelOk(auto)) { t4.odSel = auto; t4._odAuto = autoSig; }
+      if (!bikeOdSelOk(t4.odSel)) t4.odSel = ms.length > 12 ? 'L12' : ms[0];
+      var agg = bikeOdAgg(t4.odSel);
+      var monthLbl = bikeOdSelLabel;
+      var years = []; ms.forEach(function (k) { if (years.indexOf(k.slice(0, 4)) < 0) years.push(k.slice(0, 4)); });
+      var opt = function (v) { return '<option value="' + v + '"' + (v === t4.odSel ? ' selected' : '') + '>' + escHtml(bikeOdSelLabel(v)) + '</option>'; };
+      var selHtml = '<select id="bm-month" class="select-control" style="width:auto;">' +
+        (ms.length > 1 ? '<optgroup label="Időszak">' + opt('L12') + years.map(opt).join('') + opt('all') + '</optgroup><optgroup label="Hónap">' : '') +
+        ms.map(opt).join('') + (ms.length > 1 ? '</optgroup>' : '') + '</select>';
       var h = '<div class="bm-wrap"><div class="bm-map"><div class="bm-head"><h3 class="t4-h3" style="margin:0;">Kerékpárjegyek utazási viszonylat szerint</h3>' +
-        '<div class="bm-ctrl">' + bikeLayerToggle() + '<select id="bm-month" class="select-control" style="width:auto;">' + ms.map(function (m) { return '<option value="' + m + '"' + (m === t4.bikeMonth ? ' selected' : '') + '>' + monthLbl(m) + '</option>'; }).join('') +
-        (ms.length > 1 ? '<option value="all"' + (t4.bikeMonth === 'all' ? ' selected' : '') + '>Összes betöltött hónap</option>' : '') + '</select>' +
+        '<div class="bm-ctrl">' + bikeLayerToggle() + selHtml +
         '<div id="bm-view" class="segmented seg-sm"><button class="seg-btn' + (t4.bikeView !== 'bp' ? ' active' : '') + '" data-val="hu" type="button">Ország</button><button class="seg-btn' + (t4.bikeView === 'bp' ? ' active' : '') + '" data-val="bp" type="button">Budapest környéke</button></div></div></div>' +
         '<div id="bm-stage"></div><div class="fc-small">Vonalvastagság: jegyek száma a két állomás között, mindkét irányt együtt számolva (a legnagyobb ' + (t4.bikeView === 'bp' ? 400 : 320) + ' viszonylat). Pont: az állomásról induló és oda érkező jegyek. A vonalak az indulási és a célállomást kötik össze, nem a tényleges útvonalat. Sztornózott és visszatérített jegyek nélkül.</div></div>';
       var chTot = agg.ch.reduce(function (a, c) { return a + c[1]; }, 0);
@@ -8519,7 +8668,7 @@
       var W = Math.max(480, Math.round(stage.clientWidth || 760));
       var mp = bikeOdSvg(agg, t4.bikeView, W);
       stage.innerHTML = mp.svg;
-      stage._xlsx = { title: 'Kerékpárjegyek utazási viszonylat szerint – ' + monthLbl(t4.bikeMonth),
+      stage._xlsx = { title: 'Kerékpárjegyek utazási viszonylat szerint – ' + monthLbl(t4.odSel),
         head: ['Állomás A', 'Állomás B', 'Jegy összesen', 'A → B', 'B → A', 'Ø km', 'Fizetendő (Ft)', 'A szélesség', 'A hosszúság', 'B szélesség', 'B hosszúság'],
         rows: agg.list.map(function (e) { return [e.a, e.b, e.n, e.ab, e.ba, Math.round(e.km / e.n), e.rev, e.sa ? e.sa[1] : '', e.sa ? e.sa[2] : '', e.sb ? e.sb[1] : '', e.sb ? e.sb[2] : '']; }) };
       var tip = document.getElementById('floating-tooltip');
@@ -8531,7 +8680,7 @@
             '<div class="tt-row"><div class="tt-left"><span class="tt-name">Jegy összesen</span></div><div class="tt-val">' + fmtInt(e.n) + '</div></div>' +
             '<div class="tt-row"><div class="tt-left"><span class="tt-name">' + escHtml(e.a) + ' → </span></div><div class="tt-val">' + fmtInt(e.ab) + '</div></div>' +
             '<div class="tt-row"><div class="tt-left"><span class="tt-name">' + escHtml(e.b) + ' → </span></div><div class="tt-val">' + fmtInt(e.ba) + '</div></div>' +
-            '<div class="tt-sub">Ø ' + fmtInt(e.km / e.n) + ' km • a havi kerékpárjegyek ' + fmtPct(100 * e.n / agg.tot.db, 1) + '-a</div>', ev);
+            '<div class="tt-sub">Ø ' + fmtInt(e.km / e.n) + ' km • az időszak kerékpárjegyeinek ' + fmtPct(100 * e.n / agg.tot.db, 1) + '-a</div>', ev);
         });
         el.addEventListener('mouseleave', function () { tip.classList.remove('visible'); });
       });
@@ -8542,7 +8691,7 @@
         });
         el.addEventListener('mouseleave', function () { tip.classList.remove('visible'); });
       });
-      document.getElementById('bm-month').addEventListener('change', function (e) { t4.bikeMonth = e.target.value; renderBikeMap(); });
+      document.getElementById('bm-month').addEventListener('change', function (e) { t4.odSel = e.target.value; renderBikeMap(); });
       document.getElementById('bm-view').addEventListener('click', function (e) {
         var b = e.target.closest('.seg-btn');
         if (!b) return;
@@ -9393,11 +9542,15 @@
         statusEl.textContent = 'Feldolgozás: ' + file.name + '...';
 
         try {
+          if (kind === 'bikeod') {         // nagy fájl: darabonként, a teljes fájl beolvasása nélkül
+            await handleBikeOdFile(file, dz, statusEl);
+            renderAll();
+            return;
+          }
           var buf = await file.arrayBuffer();
           var bytes = new Uint8Array(buf);
-          if (kind === 'bikeod' || kind === 'punct') {
-            if (kind === 'bikeod') await handleBikeOdFile(file, buf, dz, statusEl);
-            else await handlePunctFile(file, buf, dz, statusEl);
+          if (kind === 'punct') {
+            await handlePunctFile(file, buf, dz, statusEl);
             renderAll();
             return;
           }
