@@ -1528,6 +1528,13 @@
     .bs-chg { display: inline-block; margin-left: 4px; font-size: 11.5px; color: var(--text-muted); }
     table.bs-names-t td { white-space: nowrap; }
 
+    /* Hibrid IC jelölés, bisztró KPI */
+    .hyb-badge { display: inline-block; margin-left: 4px; padding: 1px 6px; border-radius: 999px; font-size: 10.5px; font-weight: 600; background: #fef3c7; color: #92400e; vertical-align: middle; white-space: nowrap; cursor: help; }
+    .hyb-note { margin: 10px 0 0; padding: 8px 12px; border: 1px solid #fde68a; background: #fffbeb; border-radius: var(--radius-sm); font-size: 12.5px; color: #78350f; }
+    .kpi-grid.kpi5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    @media (max-width: 1180px) { .kpi-grid.kpi5 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    @media (max-width: 700px) { .kpi-grid.kpi5 { grid-template-columns: 1fr; } }
+
     /* Lenyitható blokkok */
     .card.collapsible > .card-header .card-title { cursor: pointer; user-select: none; display: inline-flex; align-items: center; gap: 6px; }
     .card.collapsible > .card-header .card-title::before { content: '▾'; display: inline-block; width: 14px; font-size: 12px; color: var(--text-muted); transition: transform 0.15s; }
@@ -1771,6 +1778,7 @@
 
           <!-- 4 KPI kártya -->
           <div id="t1-kpis" class="kpi-grid"></div>
+          <div id="t1-hyb"></div>
 
           <!-- Fő SVG Vonalgrafikon / Small Multiples -->
           <div class="card">
@@ -4043,7 +4051,6 @@
           '<div class="kpi-label">Ülőhely kihasználtság %</div>' +
           '<div class="kpi-value">' + fmtPct(seatCur.pct) + '</div>' +
           '<div class="kpi-subs"><span>1. oszt.: <strong>' + fmtPct(c1Cur.pct) + '</strong></span><span>2. oszt.: <strong>' + fmtPct(c2Cur.pct) + '</strong></span><span>Prémium: <strong>' + fmtPct(premCur.pct) + '</strong></span>' +
-            (res.bisz && res.bisz.tr > 0 ? '<span title="Bisztró bevétel: ' + fmtInt(res.bisz.rev) + ' Ft">Bisztró (2026): <strong>' + fmtInt(res.bisz.tr) + ' tranzakció</strong></span>' : '') +
             (res.km ? '<span>Km-súlyozott: <strong>' + fmtPct(res.km.pct) + '</strong></span><span>Utaskm: <strong>' + fmtInt(res.km.bk / 1000) + ' ezer</strong></span>' : '') + '</div>' +
         '</div>' +
         '<div class="kpi-card" style="--kpi-accent:' + (yoyPp !== null && yoyPp < 0 ? '#e11d48' : '#059669') + '">' +
@@ -4055,7 +4062,15 @@
           '<div class="kpi-label">Kerékpár fogyás</div>' +
           '<div class="kpi-value">' + fmtInt(bikeCur.booked) + ' <span style="font-size:14px;font-weight:600;color:var(--text-muted)">db</span></div>' +
           '<div class="kpi-subs"><span>Kerékpár kihasználtság: <strong>' + fmtPct(bikeCur.pct) + '</strong></span><span>Kapacitás: <strong>' + fmtInt(bikeCur.cap) + ' db</strong></span></div>' +
-        '</div>';
+        '</div>' +
+        (res.bisz && res.bisz.tr > 0 ? '<div class="kpi-card" style="--kpi-accent:#7c3aed">' +
+          '<div class="kpi-label">Bisztró eladások (tranzakció)</div>' +
+          '<div class="kpi-value">' + fmtInt(res.bisz.tr) + ' <span style="font-size:14px;font-weight:600;color:var(--text-muted)">db</span></div>' +
+          '<div class="kpi-subs"><span title="2026-tól, a bisztró-munkafüzet alapján">Bevétel: <strong>' + fmtInt(res.bisz.rev / 1e6) + ' M Ft</strong></span><span>Ø kosár: <strong>' + fmtInt(res.bisz.rev / res.bisz.tr) + ' Ft</strong></span></div>' +
+        '</div>' : '');
+      document.getElementById('t1-kpis').classList.toggle('kpi5', !!(res.bisz && res.bisz.tr > 0));
+      var hybNames = t1.selectedNames.size ? Array.from(t1.selectedNames) : (t1.selectedNums.size ? Array.from(t1.selectedNums).map(function (n) { return numNameMap().get(n) || ''; }) : HYB_ALWAYS.concat(HYB_OFFSEASON));
+      document.getElementById('t1-hyb').innerHTML = hybNote(hybNames, !t1.selectedNames.size && !t1.selectedNums.size);
 
       // Dinamikus cím
       var scope = 'Teljes hálózat';
@@ -4430,7 +4445,7 @@
         col = t1.radarSortCol;
         dir = t1.radarSortDir === 'asc' ? 1 : -1;
         cols = [
-          { key: 'name',      label: 'Vonatnév',            num: false, render: function (r) { return '<strong>' + escHtml(r.name) + '</strong>'; } },
+          { key: 'name',      label: 'Vonatnév',            num: false, render: function (r) { return '<strong>' + escHtml(r.name) + '</strong>' + hybBadge(r.name); } },
           { key: 'num',       label: 'Vonatszám',           num: false, render: function (r) { return escHtml(r.num); } },
           { key: 'type',      label: 'Vonatnem',            num: false, render: function (r) { return escHtml(r.type); } },
           { key: 'routeStr',  label: 'Induló – Cél',        num: false, render: function (r) { return '<span style="color:var(--text-secondary)">' + escHtml(r.routeStr) + '</span>'; } },
@@ -4476,7 +4491,7 @@
         col = t1.sortCol;
         dir = t1.sortDir === 'asc' ? 1 : -1;
         cols = [
-          { key: 'name',       label: 'Vonatnév',           num: false, render: function (r) { return '<strong>' + escHtml(r.name) + '</strong>'; } },
+          { key: 'name',       label: 'Vonatnév',           num: false, render: function (r) { return '<strong>' + escHtml(r.name) + '</strong>' + hybBadge(r.name); } },
           { key: 'num',        label: 'Vonatszám',          num: false, render: function (r) { return escHtml(r.num); } },
           { key: 'type',       label: 'Vonatnem',           num: false, render: function (r) { return escHtml(r.type); } },
           { key: 'routeStr',   label: 'Induló – Cél',       num: false, render: function (r) { return '<span style="color:var(--text-secondary)">' + escHtml(r.routeStr) + '</span>'; } },
@@ -7896,7 +7911,7 @@
       return rows.slice().sort(function (a, b) { return impactFn(b) - impactFn(a) || trainCmp(a, b); });
     }
     function t4TrainCell(e) {
-      return '<strong>' + escHtml(e.name) + '</strong> ' + escHtml(e.num) + (e.dep >= 0 ? '<br><span class="fc-small">ind. ' + fmtHhmm(e.dep) + '</span>' : '');
+      return '<strong>' + escHtml(e.name) + '</strong> ' + escHtml(e.num) + hybBadge(e.name) + (e.dep >= 0 ? '<br><span class="fc-small">ind. ' + fmtHhmm(e.dep) + '</span>' : '');
     }
     function t4Dec(v, dec) { return Number.isFinite(v) ? v.toFixed(dec === undefined ? 1 : dec).replace('.', ',') : '—'; }
     function t4Delta(v) {
@@ -10397,7 +10412,7 @@
                 : (st.futureFrom || (st.na === 0) ? 'A döntés (' + moLabelLong(it.from) + ') utáni időszakra még nincs adat – a hatás az első adatos hónaptól látszik.' : 'A döntés előtti vagy utáni időszakra nincs összevethető előző évi adat.')) + '</div>';
             }
           }
-          cards += '<div class="card wl-card"><div class="wl-card-head"><div><span class="wl-badge">' + WL_TYPES[it.type] + '</span><h3 class="wl-title">' + escHtml(lbl) + '</h3>' +
+          cards += '<div class="card wl-card"><div class="wl-card-head"><div><span class="wl-badge">' + WL_TYPES[it.type] + '</span><h3 class="wl-title">' + escHtml(lbl) + (it.type === 'name' ? hybBadge(it.key) : it.type === 'num' ? hybBadge(numNameMap().get(it.key)) : '') + '</h3>' +
             (it.note ? '<div class="wl-note">' + escHtml(it.note) + '</div>' : '') +
             '<div class="fc-small">' + (it.from ? 'Hatályos: ' + moLabelLong(it.from) + ' • ' : '') + 'felvette: ' + escHtml(it.by || '—') + (it.at ? ', ' + escHtml(it.at.slice(0, 10)) : '') +
             (it.type === 'pair' ? ' • a vonatok/buszok végállomásai szerint (átmenő vonatok nélkül)' : '') + (S.bus ? ' • vonat és helyjegyes busz együtt' : '') + (it.type === 'num' && S.nRoutes > 1 ? ' • ' + S.nRoutes + ' reláció' : '') + (it.type !== 'num' && it.type !== 'bike' && S.nums ? ' • ' + S.nums.length + ' vonat' + (S.bus ? '/busz' : '') : '') + '</div></div>' +
@@ -10614,7 +10629,9 @@
       var lc = function (c) { return c.k === 'p' ? 'prémium' : c.label; };
       var art = function (c) { return (c.k === '1' ? 'Az ' : 'A ') + lc(c); };
       var clsTxt = function (c) { return lc(c) + ' ' + anPct(100 * c.occ) + (c.occPy !== null ? ' (előző év ' + anPct(100 * c.occPy) + ')' : ''); };
-      T.occ = 'Az ülőhely-kihasználtság (1., 2. osztály' + (seatC.some(function (c) { return c.k === 'p'; }) ? ' és prémium' : '') + ' együtt) ' + anPct(100 * A.occ) + (A.net.occ !== null ? ', a hálózati átlag (' + anPct(100 * A.net.occ) + ') ' + (A.occ > A.net.occ + 0.02 ? 'fölött' : (A.occ < A.net.occ - 0.02 ? 'alatt' : 'szintjén')) : '') + '. ' +
+      var hkO = hybKind(A.name);
+      T.occ = (hkO === 'always' ? '<b>Hibrid InterCity:</b> nem helyjegyköteles, a helyjegy nélkül utazók nem látszanak, így a valós kihasználtság nagyobb az itt kimutatottnál. ' : hkO === 'off' ? '<b>A balatoni szezonon kívül hibrid InterCity:</b> ilyenkor nem helyjegyköteles, ezért a szezonon kívüli hónapokban a valós kihasználtság nagyobb lehet a kimutatottnál. ' : '') +
+        'Az ülőhely-kihasználtság (1., 2. osztály' + (seatC.some(function (c) { return c.k === 'p'; }) ? ' és prémium' : '') + ' együtt) ' + anPct(100 * A.occ) + (A.net.occ !== null ? ', a hálózati átlag (' + anPct(100 * A.net.occ) + ') ' + (A.occ > A.net.occ + 0.02 ? 'fölött' : (A.occ < A.net.occ - 0.02 ? 'alatt' : 'szintjén')) : '') + '. ' +
         (seatC.length ? 'Kocsiosztályonként: ' + seatC.map(clsTxt).join(', ') + '. ' : '') +
         seatC.filter(function (c) { return c.runs && c.full / c.runs >= 0.05; }).map(function (c) { return art(c) + ' a közlekedések ' + anPct(100 * c.full / c.runs, 0) + '-ában legalább 90%-ig megtelt. '; }).join('') +
         (A.shift ? 'Az esetek ' + anPct(100 * A.shift / A.runs) + '-ában (' + fmtInt(A.shift) + ' közlekedés) a 2. osztály legalább 90%-ig megtelt, miközben az 1. osztály legfeljebb félig volt foglalt.' : '');
@@ -10658,7 +10675,10 @@
         rec.push({ w: 10 + 20 * t.hi / t.runs, t: 'Bővítés: ' + tdesc(t) + ' ' + t.routeStr + ' – ' + fmtInt(t.hi) + ' közlekedésnél (' + anPct(100 * t.hi / t.runs, 0) + ') legalább 90%-os' + (wdTop.length ? ', főleg ' + wdTop.join(' és ') : '') + '.' });
       });
       if (hot.length) sum.push({ w: 8 + hot.length, t: 'Telítettség: ' + hot.length + ' vonatszám rendszeresen 90% fölött (pl. ' + tdesc(hot[0]) + ').' });
-      cold.slice(0, 2).forEach(function (t) { rec.push({ w: 6, t: 'Kapacitás-csökkentés vizsgálata: ' + tdesc(t) + ' ' + t.routeStr + ' – Ø ' + anPct(100 * t.occ, 0) + ' kihasználtság ' + fmtInt(t.runs) + ' közlekedésen.' }); });
+      var hk = hybKind(A.name);
+      if (hk === 'always') {
+        if (cold.length) rec.push({ w: 4, t: 'Alacsony kimutatott kihasználtság (pl. ' + tdesc(cold[0]) + ', Ø ' + anPct(100 * cold[0].occ, 0) + '), de a ' + escHtml(A.name) + ' hibrid InterCity: a helyjegy nélkül utazók nem látszanak, ezért kapacitás-csökkentést csak utasszámlálás vagy jegyeladási adat alapján érdemes vizsgálni.' });
+      } else cold.slice(0, 2).forEach(function (t) { rec.push({ w: 6, t: 'Kapacitás-csökkentés vizsgálata: ' + tdesc(t) + ' ' + t.routeStr + ' – Ø ' + anPct(100 * t.occ, 0) + ' kihasználtság ' + fmtInt(t.runs) + ' közlekedésen' + (hk === 'off' ? ' (a balatoni szezonon kívül hibrid IC: a valós foglaltság nagyobb lehet, a szezonon kívüli napokat utasszámlálással érdemes ellenőrizni)' : '') + '.' }); });
       if (A.shift / A.runs >= 0.2) rec.push({ w: 9, t: 'Osztályok közti eltolódás: a közlekedések ' + anPct(100 * A.shift / A.runs, 0) + '-ában telt 2. és félig üres 1. osztály – deklasszálás vagy 1. osztályú upgrade-akció.' });
       // csúcsnapok
       var topD = A.days.slice().sort(function (a, b) { return b.occ - a.occ; }).slice(0, 5);
@@ -10817,7 +10837,8 @@
           '<div><span>Közlekedés / vonatszám</span><strong>' + fmtInt(A.runs) + '</strong><em>' + A.trains.length + ' vonatszám</em></div>' +
           A.cls.filter(function (c) { return c.k === 'p' || !c.seat; }).map(function (c) { return '<div><span>' + c.label + ' kihasználtság</span><strong>' + anPct(100 * c.occ) + '</strong><em>' + (c.occPy !== null ? 'előző év: ' + anPct(100 * c.occPy) : '') + '</em></div>'; }).join('') +
           (A.pun ? '<div><span>Pontosság</span><strong>' + anPct(A.pun.p) + '</strong><em>' + (A.pun.net !== null ? 'hálózat: ' + anPct(A.pun.net) : '') + '</em></div>' : '') + '</div>';
-        var h = '<div class="an-head"><div class="an-kicker">Vonatnév-elemzés</div><h2>' + escHtml(A.name) + '</h2><div class="an-sub">' + T.per + ' • összevetés: előző év azonos hónapjai • készült: ' + todayHu() + '</div></div>' + kp;
+        var h = '<div class="an-head"><div class="an-kicker">Vonatnév-elemzés</div><h2>' + escHtml(A.name) + hybBadge(A.name) + '</h2><div class="an-sub">' + T.per + ' • összevetés: előző év azonos hónapjai • készült: ' + todayHu() + '</div></div>' + kp;
+        h += hybNote([A.name], false);
         h += '<section class="an-sec an-sum"><h3>Összefoglaló</h3><ul>' + T.sum.map(function (s) { return '<li>' + s + '</li>'; }).join('') + '</ul></section>';
         h += anSection('traffic', 'Forgalom', T.traffic, anSvgMonthly(A), '<span><i style="background:#0b2e59"></i>foglalt utas / vonat</span><span><i class="dash"></i>előző év</span><span><i style="background:#dbeafe"></i>vizsgált időszak</span>');
         h += anSection('occ', 'Kihasználtság kocsiosztályonként', T.occ, anSvgClass(A, true), anClsLegend(A, true));
@@ -11206,7 +11227,7 @@
           }).join('') + '</tr>';
         }).join('') + '</tbody></table></div></section>';
       h += '<section class="an-sec an-rec"><h3>Következtetések és javaslatok</h3><ol>' + (tx.rec.length ? tx.rec : ['Nincs beavatkozást igénylő jel a szezonban.']).map(function (s) { return '<li>' + s + '</li>'; }).join('') + '</ol>' +
-        '<p class="fc-small">Balatoni vonatok: a balatoni végállomású vagy onnan induló helyjegyes vonatok, valamint a déli parton átmenő Budapest / Székesfehérvár – Nagykanizsa, Zágráb vonatok, a kiválasztott vonatnevekkel. Ezeknél a teljes útvonal foglalása számít (a Balatonig utazóké is). Szezonhatárok: a MÁV balatoni elő-, fő- és utószezoni menetrendjének időszakai. Az előző év a 364 nappal korábbi, azonos hétnapokkal szerepel a napi grafikonon. Az adat helyjegyfoglalás: a balatoni vonatokon a helyjegy a szezonban kötelező, ezért a szezonon kívüli napok foglalása (és a korábbi szezonkezdés napjainak előző évi értéke) nem a teljes utasforgalom.</p></section>';
+        '<p class="fc-small">Balatoni vonatok: a balatoni végállomású vagy onnan induló helyjegyes vonatok, valamint a déli parton átmenő Budapest / Székesfehérvár – Nagykanizsa, Zágráb vonatok, a kiválasztott vonatnevekkel. Ezeknél a teljes útvonal foglalása számít (a Balatonig utazóké is). Szezonhatárok: a MÁV balatoni elő-, fő- és utószezoni menetrendjének időszakai. Az előző év a 364 nappal korábbi, azonos hétnapokkal szerepel a napi grafikonon. Az adat helyjegyfoglalás: a balatoni vonatokon a helyjegy a szezonban kötelező, ezért a szezonon kívüli napok foglalása (és a korábbi szezonkezdés napjainak előző évi értéke) nem a teljes utasforgalom. A BALATON és a TÓPART a szezonon kívül hibrid InterCity (nem helyjegyköteles), a napi grafikon szezonon kívüli szakasza ezért csak a helyjeggyel utazókat mutatja.</p></section>';
       host.innerHTML = h;
       bindBsCtl(ctl, bs, allNames);
       document.getElementById('bs-print').addEventListener('click', function () { docPrint(); });
@@ -11238,6 +11259,38 @@
       var tx = balSeasonText(fT, year, D, true);
       return anSection('balaton', 'Balatoni szezon (' + year + ')', tx.lines.join(' ') + (tx.rec.length ? ' <b>Javaslat:</b> ' + tx.rec.slice(0, 2).join(' ') : ''),
         balSvgGroups(fT, function (s) { return s.bpr; }, '', 'Ø foglalt utas / vonat szezononként'), balYearLegend(fT));
+    }
+
+    /* =========================================================================
+       HIBRID INTERCITYK: nem helyjegykötelesek, a helyjegy nélküli utasok nem látszanak
+       ========================================================================= */
+    var HYB_ALWAYS = ['NAPFÉNY', 'KRESZ GÉZA', 'SOMOGY', 'RIPPL-RÓNAI', 'BAKONY', 'GÖCSEJ', 'BÉKÉS'];
+    var HYB_OFFSEASON = ['BALATON', 'TÓPART'];   // a balatoni elő-, fő- és utószezonon kívül
+    var HYB_TIP = 'Hibrid InterCity: nem helyjegyköteles, a helyjegy nélkül utazók nem látszanak az adatban, így a valós foglaltság nagyobb lehet.';
+    var HYB_TIP_OFF = 'A balatoni elő-, fő- és utószezonon kívül hibrid InterCity: ilyenkor nem helyjegyköteles, a helyjegy nélkül utazók nem látszanak az adatban, így a valós foglaltság nagyobb lehet.';
+    function hybKind(name) {
+      var n = String(name || '').trim().toUpperCase();
+      return HYB_ALWAYS.indexOf(n) >= 0 ? 'always' : (HYB_OFFSEASON.indexOf(n) >= 0 ? 'off' : null);
+    }
+    function hybInSeason(ds) {
+      for (var y in BAL_SEASONS) { var S = BAL_SEASONS[y]; if (ds >= S.elo[0] && ds <= S.uto[1]) return true; }
+      return false;
+    }
+    function hybBadge(name) {
+      var k = hybKind(name);
+      if (!k) return '';
+      return ' <span class="hyb-badge" title="' + escHtml(k === 'always' ? HYB_TIP : HYB_TIP_OFF) + '">hibrid IC' + (k === 'off' ? ' szezonon kívül' : '') + '</span>';
+    }
+    // Figyelmeztető sáv a megadott vonatnevekre (üres lista = nincs sáv)
+    function hybNote(names, whole) {
+      var al = [], off = [];
+      names.forEach(function (n) { var k = hybKind(n); if (k === 'always' && al.indexOf(n) < 0) al.push(n); if (k === 'off' && off.indexOf(n) < 0) off.push(n); });
+      if (!al.length && !off.length) return '';
+      var t = whole
+        ? 'A hálózati adatban hibrid InterCityk is vannak (' + HYB_ALWAYS.join(', ') + '; a ' + HYB_OFFSEASON.join(' és a ') + ' a balatoni szezonon kívül). Ezek nem helyjegykötelesek, a helyjegy nélkül utazók nem látszanak, így náluk a valós foglaltság nagyobb lehet.'
+        : (al.length ? al.join(', ') + ': hibrid InterCity' + (al.length > 1 ? 'k' : '') + ' – nem helyjegyköteles' + (al.length > 1 ? 'ek' : '') + ', a helyjegy nélkül utazók nem látszanak, így a valós foglaltság nagyobb lehet. ' : '') +
+          (off.length ? off.join(', ') + ': a balatoni elő-, fő- és utószezonon kívül hibrid InterCity – ilyenkor a valós foglaltság nagyobb lehet a kimutatottnál.' : '');
+      return '<div class="hyb-note">ⓘ ' + t + '</div>';
     }
 
     /* =========================================================================
