@@ -10158,7 +10158,7 @@
       g += line(yn, Y2, '#64748b', true, 1.8);
       var axY = top2 + H2 - 10;
       var every = Math.ceil(n / 12);
-      months.forEach(function (mm, i) { if (i % every === 0 || i === n - 1) g += '<text x="' + X(i).toFixed(1) + '" y="' + axY + '" text-anchor="middle" font-size="11" fill="#64748b">' + moLabel(mm) + '</text>'; });
+      months.forEach(function (mm, i) { if (i % every === 0 || (i === n - 1 && i % every >= every * 0.6)) g += '<text x="' + X(i).toFixed(1) + '" y="' + axY + '" text-anchor="middle" font-size="11" fill="#64748b">' + moLabel(mm) + '</text>'; });
       var hits = '';
       months.forEach(function (mm, i) { hits += '<rect class="pd-col" data-i="' + i + '" x="' + (X(i) - bw / 2).toFixed(1) + '" y="0" width="' + bw.toFixed(1) + '" height="' + (top2 + H2 - 22) + '" fill="transparent"/>'; });
       var Htot = top2 + H2;
@@ -10292,7 +10292,7 @@
       g += line(py, '#94a3b8', true, 1.6) + line(cur, '#2a78d6', false, 2.2);
       cur.forEach(function (v, i) { if (v) g += '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(v).toFixed(1) + '" r="2.6" fill="#2a78d6"/>'; });
       var every = Math.ceil(ms.length / 8);
-      ms.forEach(function (m, i) { if (i % every === 0 || i === ms.length - 1) g += '<text x="' + X(i).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="10.5" fill="#64748b">' + moLabel(m) + '</text>'; });
+      ms.forEach(function (m, i) { if (i % every === 0 || (i === ms.length - 1 && i % every >= every * 0.6)) g += '<text x="' + X(i).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="10.5" fill="#64748b">' + moLabel(m) + '</text>'; });
       var hits = ms.map(function (m, i) { return '<rect class="wl-col" data-m="' + m + '" x="' + (X(i) - bw / 2).toFixed(1) + '" y="0" width="' + bw.toFixed(1) + '" height="' + (H - mb) + '" fill="transparent"/>'; }).join('');
       return '<svg class="chart-svg" viewBox="0 0 ' + W + ' ' + H + '" width="100%" height="' + H + '" preserveAspectRatio="xMidYMid meet">' + g + hits + '</svg>';
     }
@@ -10422,6 +10422,14 @@
     /* =========================================================================
        VONATNÉV-ELEMZÉS: automatikus, szabályalapú szöveges elemzés grafikonokkal
        ========================================================================= */
+    // [kapacitás oszlop, foglalás = +1]; az ülőhely-kihasználtság az 1., 2. osztály és a prémium együtt
+    var AN_CLS = [
+      { k: '1', ci: 2, label: '1. osztály', color: '#0284c7', seat: true },
+      { k: '2', ci: 4, label: '2. osztály', color: '#0f766e', seat: true },
+      { k: 'p', ci: 12, label: 'Prémium', color: '#7c3aed', seat: true },
+      { k: 'f', ci: 8, label: 'Fekvőhely', color: '#d97706', seat: false },
+      { k: 'h', ci: 10, label: 'Hálóhely', color: '#e11d48', seat: false }
+    ];
     var AN_WD = ['hétfő', 'kedd', 'szerda', 'csütörtök', 'péntek', 'szombat', 'vasárnap'];
     var AN_WD_S = ['H', 'K', 'Sze', 'Cs', 'P', 'Szo', 'V'];
     function anPct(v, d) { return fmtPct(v, d === undefined ? 1 : d); }
@@ -10452,11 +10460,14 @@
       if (!any) return null;
       var months = anMonths(per), mSet = {}, pmSet = {};
       months.forEach(function (m) { mSet[m] = 1; pmSet[moPrev(m)] = 1; });
-      var nM = mo.nM, M = { bk: new Float64Array(nM), cap: new Float64Array(nM), runs: new Float64Array(nM), b1: new Float64Array(nM), c1: new Float64Array(nM), b2: new Float64Array(nM), c2: new Float64Array(nM), bikeC: new Float64Array(nM), bikeB: new Float64Array(nM), bikeFull: new Float64Array(nM) };
+      var nM = mo.nM, M = { bk: new Float64Array(nM), cap: new Float64Array(nM), runs: new Float64Array(nM), bikeC: new Float64Array(nM), bikeB: new Float64Array(nM), bikeFull: new Float64Array(nM) };
+      AN_CLS.forEach(function (k) { M['b' + k.k] = new Float64Array(nM); M['c' + k.k] = new Float64Array(nM); });
+      var P = {}, PY = {}, FULL = {};
+      AN_CLS.forEach(function (k) { P[k.k] = [0, 0]; PY[k.k] = [0, 0]; FULL[k.k] = [0, 0]; });
       var wd = [], wdPy = [];
       for (var w = 0; w < 7; w++) { wd.push({ bk: 0, cap: 0, runs: 0 }); wdPy.push({ bk: 0, cap: 0, runs: 0 }); }
-      var trains = new Map(), days = new Map(), shift = 0, runsP = 0, runsPy = 0, bkP = 0, capP = 0, bkPy = 0, capPy = 0, b1P = 0, c1P = 0, b2P = 0, c2P = 0;
-      var bz = biszRowOf(occ), bzTr = 0, bzPax = 0, bikeFullP = 0, bikeRunsP = 0, bikeB = 0, bikeC = 0, b1Py = 0, c1Py = 0, b2Py = 0, c2Py = 0;
+      var trains = new Map(), days = new Map(), shift = 0, runsP = 0, runsPy = 0, bkP = 0, capP = 0, bkPy = 0, capPy = 0;
+      var bz = biszRowOf(occ), bzTr = 0, bzPax = 0, bikeFullP = 0, bikeRunsP = 0, bikeB = 0, bikeC = 0;
       var dmKey = function (d) { return occ.dates[d].slice(0, 7); };
       for (var i = 0; i < occ.rowCount; i++) {
         var off = i * STRIDE, r = R[off + 1];
@@ -10464,13 +10475,21 @@
         var d = R[off], mk = dmKey(d), mi = mo.mIdx[mk];
         var c1 = R[off + 2], b1 = R[off + 3], c2 = R[off + 4], b2 = R[off + 5], cp = R[off + 12], bp = R[off + 13];
         var bk = b1 + b2 + bp, cap = c1 + c2 + cp;
-        M.bk[mi] += bk; M.cap[mi] += cap; M.runs[mi] += 1; M.b1[mi] += b1; M.c1[mi] += c1; M.b2[mi] += b2 + bp; M.c2[mi] += c2 + cp;
+        M.bk[mi] += bk; M.cap[mi] += cap; M.runs[mi] += 1;
+        var inP = !!mSet[mk], inPy = !inP && !!pmSet[mk];
+        for (var ci = 0; ci < AN_CLS.length; ci++) {
+          var K = AN_CLS[ci], cc = R[off + K.ci], bb = R[off + K.ci + 1];
+          if (!cc) continue;
+          M['b' + K.k][mi] += bb; M['c' + K.k][mi] += cc;
+          if (inP) { P[K.k][0] += bb; P[K.k][1] += cc; FULL[K.k][1]++; if (bb >= 0.9 * cc) FULL[K.k][0]++; }
+          else if (inPy) { PY[K.k][0] += bb; PY[K.k][1] += cc; }
+        }
         M.bikeC[mi] += R[off + 6]; M.bikeB[mi] += R[off + 7];
         var full = R[off + 6] > 0 && R[off + 7] >= R[off + 6];
         if (full) M.bikeFull[mi] += 1;
         var wdi = occ.dateWd[d];
         if (mSet[mk]) {
-          runsP++; bkP += bk; capP += cap; b1P += b1; c1P += c1; b2P += b2 + bp; c2P += c2 + cp;
+          runsP++; bkP += bk; capP += cap;
           wd[wdi].bk += bk; wd[wdi].cap += cap; wd[wdi].runs++;
           if (R[off + 6] > 0) { bikeRunsP++; bikeB += R[off + 7]; bikeC += R[off + 6]; if (full) bikeFullP++; }
           if (c2 > 0 && c1 > 0 && b2 / c2 >= 0.9 && b1 / c1 <= 0.5) shift++;
@@ -10484,7 +10503,7 @@
           if (!dd) { dd = { d: d, bk: 0, cap: 0 }; days.set(d, dd); }
           dd.bk += bk; dd.cap += cap;
         } else if (pmSet[mk]) {
-          runsPy++; bkPy += bk; capPy += cap; b1Py += b1; c1Py += c1; b2Py += b2 + bp; c2Py += c2 + cp;
+          runsPy++; bkPy += bk; capPy += cap;
           wdPy[wdi].bk += bk; wdPy[wdi].cap += cap; wdPy[wdi].runs++;
         }
       }
@@ -10534,8 +10553,8 @@
       var dl = Array.from(days.values()).map(function (x) { x.occ = x.cap ? x.bk / x.cap : 0; return x; });
       return {
         name: name, months: months, pms: pms, M: M, mo: mo, trains: tl, days: dl, wd: wd, wdPy: wdPy,
-        runs: runsP, bk: bkP, cap: capP, occ: capP ? bkP / capP : 0, occ1: c1P ? b1P / c1P : null, occ2: c2P ? b2P / c2P : null,
-        runsPy: runsPy, bkPy: bkPy, occPy: capPy ? bkPy / capPy : null, occ1Py: c1Py ? b1Py / c1Py : null, occ2Py: c2Py ? b2Py / c2Py : null,
+        runs: runsP, bk: bkP, cap: capP, occ: capP ? bkP / capP : 0, runsPy: runsPy, bkPy: bkPy, occPy: capPy ? bkPy / capPy : null,
+        cls: AN_CLS.map(function (K) { return { k: K.k, label: K.label, color: K.color, seat: K.seat, bk: P[K.k][0], cap: P[K.k][1], occ: P[K.k][1] ? P[K.k][0] / P[K.k][1] : null, occPy: PY[K.k][1] ? PY[K.k][0] / PY[K.k][1] : null, runs: FULL[K.k][1], full: FULL[K.k][0] }; }).filter(function (c) { return c.cap > 0; }),
         bpr: bkP / runsP, bprPy: runsPy ? bkPy / runsPy : null, shift: shift,
         bike: bikeRunsP ? { runs: bikeRunsP, full: bikeFullP, occ: bikeC ? bikeB / bikeC : 0 } : null,
         bz: bzPax ? { pen: 100 * bzTr / bzPax, tr: bzTr, net: netBz } : null,
@@ -10558,10 +10577,33 @@
         (hiM && lowM && mBk.length >= 3 ? 'A legerősebb hónap ' + moLabelLong(hiM.m) + ' volt (Ø ' + fmtInt(hiM.bk / hiM.runs) + ' foglalt/vonat), a leggyengébb ' + moLabelLong(lowM.m) + ' (Ø ' + fmtInt(lowM.bk / lowM.runs) + ').' : '');
       if (yoy !== null) sum.push({ w: Math.abs(yoy) + 5, t: 'Kereslet: vonatonként ' + anChg(yoy) + ' az előző évhez képest' + (netYoy !== null ? ' (hálózat: ' + anChg(netYoy) + ')' : '') + '.' });
       // kihasználtság
-      T.occ = 'Az ülőhely-kihasználtság ' + anPct(100 * A.occ) + (A.net.occ !== null ? ', a hálózati átlag (' + anPct(100 * A.net.occ) + ') ' + (A.occ > A.net.occ + 0.02 ? 'fölött' : (A.occ < A.net.occ - 0.02 ? 'alatt' : 'szintjén')) : '') + '. ' +
-        (A.occ1 !== null && A.occ2 !== null ? 'Osztályonként: 1. osztály ' + anPct(100 * A.occ1) + (A.occ1Py !== null ? ' (előző év ' + anPct(100 * A.occ1Py) + ')' : '') + ', 2. osztály ' + anPct(100 * A.occ2) + (A.occ2Py !== null ? ' (előző év ' + anPct(100 * A.occ2Py) + ')' : '') + '. ' : '') +
+      var seatC = A.cls.filter(function (c) { return c.seat; }), sleepC = A.cls.filter(function (c) { return !c.seat; });
+      var lc = function (c) { return c.k === 'p' ? 'prémium' : c.label; };
+      var art = function (c) { return (c.k === '1' ? 'Az ' : 'A ') + lc(c); };
+      var clsTxt = function (c) { return lc(c) + ' ' + anPct(100 * c.occ) + (c.occPy !== null ? ' (előző év ' + anPct(100 * c.occPy) + ')' : ''); };
+      T.occ = 'Az ülőhely-kihasználtság (1., 2. osztály' + (seatC.some(function (c) { return c.k === 'p'; }) ? ' és prémium' : '') + ' együtt) ' + anPct(100 * A.occ) + (A.net.occ !== null ? ', a hálózati átlag (' + anPct(100 * A.net.occ) + ') ' + (A.occ > A.net.occ + 0.02 ? 'fölött' : (A.occ < A.net.occ - 0.02 ? 'alatt' : 'szintjén')) : '') + '. ' +
+        (seatC.length ? 'Kocsiosztályonként: ' + seatC.map(clsTxt).join(', ') + '. ' : '') +
+        seatC.filter(function (c) { return c.runs && c.full / c.runs >= 0.05; }).map(function (c) { return art(c) + ' a közlekedések ' + anPct(100 * c.full / c.runs, 0) + '-ában legalább 90%-ig megtelt. '; }).join('') +
         (A.shift ? 'Az esetek ' + anPct(100 * A.shift / A.runs) + '-ában (' + fmtInt(A.shift) + ' közlekedés) a 2. osztály legalább 90%-ig megtelt, miközben az 1. osztály legfeljebb félig volt foglalt.' : '');
-      sum.push({ w: Math.abs(A.occ - (A.net.occ || A.occ)) * 100 + 3, t: 'Kihasználtság: ' + anPct(100 * A.occ) + (A.net.occ !== null ? ' (hálózat: ' + anPct(100 * A.net.occ) + ')' : '') + (A.occ1 !== null && A.occ2 !== null ? '; 1. o. ' + anPct(100 * A.occ1, 0) + ', 2. o. ' + anPct(100 * A.occ2, 0) : '') + '.' });
+      var shortL = { '1': '1. o.', '2': '2. o.', p: 'prémium', f: 'fekvő', h: 'háló' };
+      sum.push({ w: Math.abs(A.occ - (A.net.occ || A.occ)) * 100 + 3, t: 'Kihasználtság: ' + anPct(100 * A.occ) + (A.net.occ !== null ? ' (hálózat: ' + anPct(100 * A.net.occ) + ')' : '') + (A.cls.length ? '; ' + A.cls.map(function (c) { return shortL[c.k] + ' ' + anPct(100 * c.occ, 0); }).join(', ') : '') + '.' });
+      // prémium
+      var pr = seatC.find(function (c) { return c.k === 'p'; });
+      if (pr) {
+        if (pr.runs && pr.full / pr.runs >= 0.15) rec.push({ w: 8 + 20 * pr.full / pr.runs, t: 'Prémium: a közlekedések ' + anPct(100 * pr.full / pr.runs, 0) + '-ában legalább 90%-os – több prémium hely vagy magasabb prémium felár.' });
+        else if (pr.occ < 0.3 && pr.runs >= 20) rec.push({ w: 6, t: 'Prémium: Ø ' + anPct(100 * pr.occ, 0) + ' kihasználtság – a prémium ajánlat árazása, kommunikációja vagy a helyek átsorolása.' });
+      }
+      // fekvő- és hálóhely
+      if (sleepC.length) {
+        T.sleep = sleepC.map(function (c) {
+          return 'A ' + c.label.toLowerCase() + ' ' + fmtInt(c.runs) + ' közlekedésen volt, átlagos kihasználtsága ' + anPct(100 * c.occ) + (c.occPy !== null ? ' (előző év ' + anPct(100 * c.occPy) + ')' : '') + ', ' + fmtInt(c.bk) + ' foglalással; ' + (c.full ? fmtInt(c.full) + ' alkalommal (' + anPct(100 * c.full / c.runs, 0) + ') volt legalább 90%-ig foglalt.' : 'egyszer sem volt 90% fölött.');
+        }).join(' ');
+        sleepC.forEach(function (c) {
+          if (c.full / c.runs >= 0.15) rec.push({ w: 8 + 20 * c.full / c.runs, t: c.label + ': a közlekedések ' + anPct(100 * c.full / c.runs, 0) + '-ában legalább 90%-os – kocsibővítés a csúcsidőszakban.' });
+          else if (c.occ < 0.3 && c.runs >= 20) rec.push({ w: 5, t: c.label + ': Ø ' + anPct(100 * c.occ, 0) + ' kihasználtság – kevesebb kocsi vagy ülőhelyes kiváltás vizsgálata.' });
+        });
+        sum.push({ w: 5, t: sleepC.map(function (c) { return c.label + ': ' + anPct(100 * c.occ, 0) + (c.occPy !== null ? ' (előző év ' + anPct(100 * c.occPy, 0) + ')' : ''); }).join(', ') + '.' });
+      }
       // hét napjai
       var wdo = A.wd.map(function (x, i) { return { i: i, occ: x.cap ? x.bk / x.cap : null, runs: x.runs }; }).filter(function (x) { return x.occ !== null; });
       if (wdo.length >= 3) {
@@ -10632,26 +10674,33 @@
       g += line(py, '#94a3b8', true, 1.8) + line(cur, '#0b2e59', false, 2.4);
       cur.forEach(function (v, i) { if (v) g += '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(v).toFixed(1) + '" r="3" fill="#0b2e59"/>'; });
       var ev = Math.ceil(ms.length / 12);
-      ms.forEach(function (m, i) { if (i % ev === 0 || i === ms.length - 1) g += '<text x="' + X(i).toFixed(1) + '" y="' + (H - 9) + '" text-anchor="middle" font-size="11" fill="#64748b">' + moLabel(m) + '</text>'; });
+      ms.forEach(function (m, i) { if (i % ev === 0 || (i === ms.length - 1 && i % ev >= ev * 0.6)) g += '<text x="' + X(i).toFixed(1) + '" y="' + (H - 9) + '" text-anchor="middle" font-size="11" fill="#64748b">' + moLabel(m) + '</text>'; });
       g += '<text x="' + ml + '" y="10" font-size="11" fill="#475569">foglalt utas / közlekedő vonat</text>';
       return '<svg class="chart-svg" viewBox="0 0 ' + W + ' ' + H + '" width="100%" xmlns="http://www.w3.org/2000/svg">' + g + '</svg>';
     }
-    function anSvgClass(A) {
-      var mo = A.mo, ms = mo.months.slice(-24), W = 860, H = 250, ml = 50, mr = 16, mt = 12, mb = 30;
-      var s1 = ms.map(function (m) { var i = mo.mIdx[m]; return A.M.c1[i] ? 100 * A.M.b1[i] / A.M.c1[i] : null; });
-      var s2 = ms.map(function (m) { var i = mo.mIdx[m]; return A.M.c2[i] ? 100 * A.M.b2[i] / A.M.c2[i] : null; });
-      var bw = (W - ml - mr) / ms.length, X = function (i) { return ml + bw * (i + 0.5); }, Y = function (v) { return mt + (1 - v / 100) * (H - mt - mb); };
+    function anSvgClass(A, seat) {
+      var mo = A.mo, ms = mo.months.slice(-24), W = 860, H = 250, ml = 50, mr = 70, mt = 12, mb = 30;
+      var cls = A.cls.filter(function (c) { return c.seat === seat; });
+      var ser = cls.map(function (c) { return { c: c, v: ms.map(function (m) { var i = mo.mIdx[m]; return A.M['c' + c.k][i] ? 100 * A.M['b' + c.k][i] / A.M['c' + c.k][i] : null; }) }; });
+      var bw = (W - ml - mr) / ms.length, X = function (i) { return ml + bw * (i + 0.5); }, Y = function (v) { return mt + (1 - Math.min(v, 100) / 100) * (H - mt - mb); };
       var g = '';
-      for (var y = 0; y <= 100; y += 20) g += '<line x1="' + ml + '" x2="' + (W - mr) + '" y1="' + Y(y) + '" y2="' + Y(y) + '" stroke="' + (y === 80 ? '#cbd5e1' : '#e2e8f0') + '"' + (y === 80 ? ' stroke-dasharray="3 3"' : '') + '/><text x="' + (ml - 6) + '" y="' + (Y(y) + 4) + '" text-anchor="end" font-size="11" fill="#64748b">' + y + '%</text>';
-      var line = function (vals, col) { var d = '', pen = false; vals.forEach(function (v, i) { if (v === null) { pen = false; return; } d += (pen ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1); pen = true; }); return d ? '<path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="2.2" stroke-linejoin="round"/>' : ''; };
-      g += line(s1, '#0284c7') + line(s2, '#0f766e');
-      var lastI = ms.length - 1;
-      if (s1[lastI] !== null) g += '<text x="' + (X(lastI) - 4) + '" y="' + (Y(s1[lastI]) - 7) + '" text-anchor="end" font-size="11" font-weight="600" fill="#0f172a">1. o.</text>';
-      if (s2[lastI] !== null) g += '<text x="' + (X(lastI) - 4) + '" y="' + (Y(s2[lastI]) - 7) + '" text-anchor="end" font-size="11" font-weight="600" fill="#0f172a">2. o.</text>';
+      for (var y = 0; y <= 100; y += 20) g += '<line x1="' + ml + '" x2="' + (W - mr) + '" y1="' + Y(y) + '" y2="' + Y(y) + '" stroke="#e2e8f0"/><text x="' + (ml - 6) + '" y="' + (Y(y) + 4) + '" text-anchor="end" font-size="11" fill="#64748b">' + y + '%</text>';
+      var ends = [];
+      ser.forEach(function (s) {
+        var d = '', pen = false, last = null;
+        s.v.forEach(function (v, i) { if (v === null) { pen = false; return; } d += (pen ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1); pen = true; last = i; });
+        if (d) g += '<path d="' + d + '" fill="none" stroke="' + s.c.color + '" stroke-width="2.2" stroke-linejoin="round"/>';
+        if (last !== null) ends.push({ y: Y(s.v[last]), x: X(last), t: s.c.label });
+      });
+      // végfeliratok ütközés nélkül
+      ends.sort(function (a, b) { return a.y - b.y; });
+      for (var k = 1; k < ends.length; k++) if (ends[k].y - ends[k - 1].y < 13) ends[k].y = ends[k - 1].y + 13;
+      ends.forEach(function (e) { g += '<text x="' + (e.x + 6) + '" y="' + (e.y + 4) + '" font-size="11" font-weight="600" fill="#0f172a">' + e.t + '</text>'; });
       var ev = Math.ceil(ms.length / 12);
-      ms.forEach(function (m, i) { if (i % ev === 0 || i === ms.length - 1) g += '<text x="' + X(i).toFixed(1) + '" y="' + (H - 9) + '" text-anchor="middle" font-size="11" fill="#64748b">' + moLabel(m) + '</text>'; });
+      ms.forEach(function (m, i) { if (i % ev === 0 || (i === ms.length - 1 && i % ev >= ev * 0.6)) g += '<text x="' + X(i).toFixed(1) + '" y="' + (H - 9) + '" text-anchor="middle" font-size="11" fill="#64748b">' + moLabel(m) + '</text>'; });
       return '<svg class="chart-svg" viewBox="0 0 ' + W + ' ' + H + '" width="100%" xmlns="http://www.w3.org/2000/svg">' + g + '</svg>';
     }
+    function anClsLegend(A, seat) { return A.cls.filter(function (c) { return c.seat === seat; }).map(function (c) { return '<span><i style="background:' + c.color + '"></i>' + c.label + '</span>'; }).join(''); }
     function anSvgWeekday(A) {
       var W = 860, H = 230, ml = 50, mr = 16, mt = 16, mb = 28, bw = (W - ml - mr) / 7;
       var v = A.wd.map(function (x) { return x.cap ? 100 * x.bk / x.cap : null; }), p = A.wdPy.map(function (x) { return x.cap ? 100 * x.bk / x.cap : null; });
@@ -10690,7 +10739,7 @@
       for (var y = 0; y <= mx + 1e-9; y += sy) g += '<line x1="' + ml + '" x2="' + (W - mr) + '" y1="' + Y(y) + '" y2="' + Y(y) + '" stroke="#e2e8f0"/><text x="' + (ml - 6) + '" y="' + (Y(y) + 4) + '" text-anchor="end" font-size="11" fill="#64748b">' + fmtInt(y) + '</text>';
       v.forEach(function (val, i) { if (val) g += '<rect x="' + (X(i) - bw * 0.3).toFixed(1) + '" y="' + Y(val).toFixed(1) + '" width="' + (bw * 0.6).toFixed(1) + '" height="' + (Y(0) - Y(val)).toFixed(1) + '" rx="3" fill="#059669"/>'; });
       var ev = Math.ceil(ms.length / 12);
-      ms.forEach(function (m, i) { if (i % ev === 0 || i === ms.length - 1) g += '<text x="' + X(i).toFixed(1) + '" y="' + (H - 9) + '" text-anchor="middle" font-size="11" fill="#64748b">' + moLabel(m) + '</text>'; });
+      ms.forEach(function (m, i) { if (i % ev === 0 || (i === ms.length - 1 && i % ev >= ev * 0.6)) g += '<text x="' + X(i).toFixed(1) + '" y="' + (H - 9) + '" text-anchor="middle" font-size="11" fill="#64748b">' + moLabel(m) + '</text>'; });
       g += '<text x="' + ml + '" y="10" font-size="11" fill="#475569">közlekedések megtelt kerékpárhellyel / hó</text>';
       return '<svg class="chart-svg" viewBox="0 0 ' + W + ' ' + H + '" width="100%" xmlns="http://www.w3.org/2000/svg">' + g + '</svg>';
     }
@@ -10733,11 +10782,13 @@
           '<div><span>Ø foglalt / vonat</span><strong>' + fmtInt(A.bpr) + '</strong><em class="' + (yoy === null ? '' : yoy < 0 ? 'wl-neg' : 'wl-pos') + '">' + (yoy === null ? '' : anChg(yoy) + ' előző évhez') + '</em></div>' +
           '<div><span>Ülőhely-kihasználtság</span><strong>' + anPct(100 * A.occ) + '</strong><em>' + (A.net.occ !== null ? 'hálózat: ' + anPct(100 * A.net.occ) : '') + '</em></div>' +
           '<div><span>Közlekedés / vonatszám</span><strong>' + fmtInt(A.runs) + '</strong><em>' + A.trains.length + ' vonatszám</em></div>' +
+          A.cls.filter(function (c) { return c.k === 'p' || !c.seat; }).map(function (c) { return '<div><span>' + c.label + ' kihasználtság</span><strong>' + anPct(100 * c.occ) + '</strong><em>' + (c.occPy !== null ? 'előző év: ' + anPct(100 * c.occPy) : '') + '</em></div>'; }).join('') +
           (A.pun ? '<div><span>Pontosság</span><strong>' + anPct(A.pun.p) + '</strong><em>' + (A.pun.net !== null ? 'hálózat: ' + anPct(A.pun.net) : '') + '</em></div>' : '') + '</div>';
         var h = '<div class="an-head"><div class="an-kicker">Vonatnév-elemzés</div><h2>' + escHtml(A.name) + '</h2><div class="an-sub">' + T.per + ' • összevetés: előző év azonos hónapjai • készült: ' + todayHu() + '</div></div>' + kp;
         h += '<section class="an-sec an-sum"><h3>Összefoglaló</h3><ul>' + T.sum.map(function (s) { return '<li>' + s + '</li>'; }).join('') + '</ul></section>';
         h += anSection('traffic', 'Forgalom', T.traffic, anSvgMonthly(A), '<span><i style="background:#0b2e59"></i>foglalt utas / vonat</span><span><i class="dash"></i>előző év</span><span><i style="background:#dbeafe"></i>vizsgált időszak</span>');
-        h += anSection('occ', 'Kihasználtság osztályonként', T.occ, anSvgClass(A), '<span><i style="background:#0284c7"></i>1. osztály</span><span><i style="background:#0f766e"></i>2. osztály (prémiummal)</span>');
+        h += anSection('occ', 'Kihasználtság kocsiosztályonként', T.occ, anSvgClass(A, true), anClsLegend(A, true));
+        if (T.sleep) h += anSection('sleep', 'Fekvő- és hálóhely', T.sleep, anSvgClass(A, false), anClsLegend(A, false));
         if (T.wd) h += anSection('wd', 'A hét napjai', T.wd, anSvgWeekday(A), '<span><i style="background:#0b2e59"></i>ülőhely-kihasználtság</span><span><i class="dash"></i>előző év</span>');
         h += anSection('trains', 'Vonatonként', T.trains + (T.days ? ' ' + T.days : ''), anSvgTrains(A), '<span><i style="background:#0b2e59"></i>Ø kihasználtság</span><span><i style="background:#b45309"></i>a közlekedések ≥15%-ában 90% fölött</span><span>jobbra: 90% fölötti közlekedés / összes</span>');
         if (A.bike) h += anSection('bike', 'Kerékpár', T.bike, A.bike.full ? anSvgBike(A) : '', '');
