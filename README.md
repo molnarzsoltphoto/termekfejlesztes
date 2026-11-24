@@ -45,3 +45,8 @@ A szerkesztő mentéskor a `havi-riport.html`-be egy kis, tömörítetlen JSON-b
 - **Kerékpárjegy-eladások** (szerkesztő, 6. mező, `.xlsx`): a szolgálati hely szerinti havi kimutatás. A hónapot a kimutatás szűrő-szövegéből olvassa, több hónap egymás után betölthető. A 4. fül kerékpár-részében térképen jelenik meg (ország / Budapest környéke). Az állomáskoordináták a `mav-stations` adatcsomagból (ISC licenc) vannak beépítve; az ügyfélszolgálati irodák és buszállomások a településük állomásához kerülnek. Az online (E-Ticket) eladás helyhez nem köthető.
 - **Kínálatfejlesztési jelzések** időszaka: utolsó 12 hónap, év, hónap, hét vagy nap. Rövid időszaknál a küszöbök arányosan kisebbek.
 - **Excel-export**: az Export ablakban „Excel (.xlsx)” formátum. Minden kijelölt elem külön munkalap, a táblázatok teljes terjedelemben, a grafikonok mögötti adatsorokkal; a számok számként kerülnek át.
+
+## Kerékpáros viszonylatok és menetrendszerűség
+
+- **Kerékpárjegyek jegy-szinten (R155 CSV, szerkesztő 7. mező):** viszonylatokká összesítve (indulási–célállomás, mindkét irány együtt) a kerékpár-térkép „Utazási viszonylatok” rétegén, alatta a 20 legnépszerűbb viszonylat táblázata, oldalt az értékesítési csatornák. Sztornózott és visszatérített jegyek nélkül. A térkép vonalai az indulási és célállomást kötik össze, nem az útvonalat.
+- **Menetrendszerűség (xlsx, szerkesztő 8. mező):** a 4. fül 5. kártyáján a 25 legrosszabb pontosságú vonat (szegmens- és minimális utasszám-szűrővel), vonatszám szerint összekötve a járati adattal (vonatnév, reláció, kihasználtság, kerékpárhely, bisztró), valamint vonatnév szerinti összesítő. Az 1. fül táblázatában „Pontosság” oszlop, ha a szűrt időszakban van menetrendszerűségi adat.
