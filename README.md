@@ -78,3 +78,7 @@ Minden tartalmi blokk a címére kattintva becsukható / kinyitható (▾ / ▸)
 - Vonatszám, vonatnév, reláció (vonatok és helyjegyes buszok végállomásai szerint) vagy kerékpáros viszonylat vehető fel, döntés / megjegyzés és hatályba lépés hónapja megadásával.
 - Kártyánként: utolsó hónap foglalása, előző év, foglalás / vonat változása, kihasználtság, pontosság, 24 havi grafikon az előző évvel; hatálybalépés esetén a döntés előtti 3 és utáni legfeljebb 6 hónap előző évhez mért változásának összevetése.
 - A lista a Firestore `riport/watch` dokumentumában van: mindenki látja, `szerkeszto` / `admin` szerkeszti (a riport oldaláról is, bejelentkezve). A titkosított küldhető fájlba a mentéskori lista kerül.
+
+## Vonatnév-elemzés (6. fül)
+
+Kiválasztott vonatnévre és időszakra (utolsó 12 / 3 hónap, naptári év) automatikus, szabályalapú szöveges elemzés grafikonokkal: összefoglaló, forgalom (foglalás / vonat havonta az előző évvel), kihasználtság osztályonként, a hét napjai, vonatonként (90% fölötti közlekedések), csúcsnapok, kerékpár, bisztró, pontosság, végül következtetések és javaslatok. Nyomtatható (A4 PDF) és PowerPointba menthető. Küszöbök: telítettség ≥90%, rendszeres = a közlekedések ≥15%-a (legalább 3 alkalom), alacsony kihasználtság = Ø <35%.
