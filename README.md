@@ -65,3 +65,16 @@ A szerkesztő feltöltéskor egy kis JSON-összesítőt is ír a Firestore `ripo
 ## Lenyitható blokkok
 
 Minden tartalmi blokk a címére kattintva becsukható / kinyitható (▾ / ▸). Az állapotot a böngésző megjegyzi; exportkor a becsukott blokkok is bekerülnek.
+
+## Pontosság és kereslet (4. fül, 6. kártya)
+
+- **Pontdiagram:** vonatnevenként az utasszámmal súlyozott pontosság és a foglalás / közlekedő vonat változása az előző év azonos hónapjaihoz (a szezonalitás és a járatszám-változás így kiesik), a betöltött menetrendszerűségi hónapokra. Korrelációs együttható és lineáris illesztés; narancs: a hálózatnál pontatlanabb és gyengébb keresletű vonatnév.
+- **Havi bontás:** a kiválasztott vonatnév pontossága és keresletváltozása közös időtengelyen, a hálózati értékkel.
+- **Tartósan romló pontosság:** legalább 3 hónap adatból lineáris trend vonatnevenként, értékelés a kereslet trendjével együtt.
+- Több hónap menetrendszerűségi kimutatása a szerkesztő 8. mezőjébe egyszerre is kijelölhető. Együttmozgást mutat, nem bizonyított ok-okozatot.
+
+## Figyelőlista (5. fül)
+
+- Vonatszám, vonatnév, reláció (vonatok és helyjegyes buszok végállomásai szerint) vagy kerékpáros viszonylat vehető fel, döntés / megjegyzés és hatályba lépés hónapja megadásával.
+- Kártyánként: utolsó hónap foglalása, előző év, foglalás / vonat változása, kihasználtság, pontosság, 24 havi grafikon az előző évvel; hatálybalépés esetén a döntés előtti 3 és utáni legfeljebb 6 hónap előző évhez mért változásának összevetése.
+- A lista a Firestore `riport/watch` dokumentumában van: mindenki látja, `szerkeszto` / `admin` szerkeszti (a riport oldaláról is, bejelentkezve). A titkosított küldhető fájlba a mentéskori lista kerül.
