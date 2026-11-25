@@ -103,3 +103,12 @@ A fejlécben (a fülek alatt) kapcsoló: **Összes hely** (alapértelmezés: 1.,
 ## Menetrendszerűség az 1. fül grafikonján
 
 Kihasználtság % nézetben (osztályonkénti vagy vonatonkénti vonalaknál) külön vonal: a kiválasztott vonatok menetrendszerűsége, utasszámmal súlyozva, a betöltött menetrendszerűségi hónapokra (napi bontásban a havi érték). Ugyanazon a %-os tengelyen, az előző év (ha van adat) szaggatottan; a jelmagyarázatban ki-be kapcsolható. Darabszámos nézetben (foglalt utas, kapacitás) nem jelenik meg, mert ott a tengely nem %.
+
+## Összeállítási eltérések (szerkesztő 9. mező)
+
+Napi kimutatás vonatszám szerint (`Datum`, `Vonatszám`, `Eltérés`, `Kód`, `Esemény minősítése`, `Esemény`): kevesebb jármű / több jármű / egyéb. Új fájl betöltésekor a fájl időszakába eső napok lecserélődnek, a többi megmarad – elég az új hónapokat feltölteni.
+
+- **4. fül, 7. kártya:** KPI-k (összes, minősítésenként, érintett vonatszám, helyjegyes vonatra eső rész) az előző évhez mérve; havi grafikon minősítésenként; okok táblája; a 25 vonat, amely a legtöbbször közlekedett kevesebb járművel (alapból a helyjegyes vonatok, kapcsolóval mind), a foglalási adattal: kihasználtság a kevesebb járműves napokon és a többi napon, ≥90%-os napok kevesebb járművel; hiányzó járműtípusok. Követi a 4. fül időszak-, kereső- és páros/páratlan szűrőjét.
+- **Vonatnév-elemzés:** KPI-kártya, „Összeállítási eltérések” fejezet vonatszámonkénti grafikonnal, javaslatok (pl. ha a közlekedések ≥5%-ában kevesebb járművel ment, vagy telt vonat közlekedett kevesebb kocsival).
+- **1. fül táblázat:** „Össz. eltérés” oszlop a szűrt időszakra (zárójelben a kevesebb járműves).
+- A foglalási kapacitás a tervezett összeállítást tükrözi, ezért kevesebb kocsival a valós zsúfoltság nagyobb lehet, mint amit a kihasználtság mutat. A kimutatás sorainak kb. harmada köthető helyjegyes vonatszámhoz.
