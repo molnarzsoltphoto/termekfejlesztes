@@ -99,3 +99,7 @@ Kiválasztott vonatnévre és időszakra (utolsó 12 / 3 hónap, naptári év, e
 ## Kapacitás: összes hely vagy ülőhely
 
 A fejlécben (a fülek alatt) kapcsoló: **Összes hely** (alapértelmezés: 1., 2. osztály, prémium, fekvő- és hálóhely) vagy **Ülőhely** (1., 2. osztály és prémium). Minden foglalási és kihasználtsági mutató ehhez számol (1. fül KPI-k és táblázat, 4. fül, menetrendszerűségi kártya járati adatai, figyelőlista, vonatnév-elemzés, balatoni szezon). A választást a böngésző megjegyzi. A menetrendszerűség–kereslet elemzés mindig az összes hellyel számol; az osztályonkénti bontások (1. o., 2. o., prémium, fekvő, háló) változatlanok.
+
+## Menetrendszerűség az 1. fül grafikonján
+
+Kihasználtság % nézetben (osztályonkénti vagy vonatonkénti vonalaknál) külön vonal: a kiválasztott vonatok menetrendszerűsége, utasszámmal súlyozva, a betöltött menetrendszerűségi hónapokra (napi bontásban a havi érték). Ugyanazon a %-os tengelyen, az előző év (ha van adat) szaggatottan; a jelmagyarázatban ki-be kapcsolható. Darabszámos nézetben (foglalt utas, kapacitás) nem jelenik meg, mert ott a tengely nem %.

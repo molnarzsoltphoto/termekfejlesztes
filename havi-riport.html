@@ -3707,6 +3707,26 @@
           })
         };
       }
+      // Menetrendszerűség vonala (havi adat, a kiválasztás vonataira, VTK-val súlyozva) – csak % nézetben, egy grafikonon
+      if (state.punct && metric === 'pct' && chartModel.mode === 'single' && bucketKeys.length) {
+        var pNums = new Set();
+        for (var pr2 = 0; pr2 < numRoutes; pr2++) if (routeGroup[pr2] >= 0) pNums.add(occ.routes[pr2][0]);
+        var pAt = function (mk) {
+          var P = state.punct.months[mk];
+          if (!P) return null;
+          var s = 0, w = 0, n = 0;
+          pNums.forEach(function (num) { var v = P.byNum[num]; if (v && v[1] !== null && v[2] > 0) { s += v[1] * v[2]; w += v[2]; n++; } });
+          return w ? { pct: 100 * s / w, n: n } : null;
+        };
+        var pVals = [], pMeta = [], pPy = t1.showPy ? [] : null, anyP = false;
+        bucketKeys.forEach(function (k) {
+          var mk = String(k).slice(0, 7), r0 = pAt(mk);
+          pVals.push(r0 ? r0.pct : null); pMeta.push({ punct: true, n: r0 ? r0.n : 0, booked: 0, cap: 0, pct: r0 ? r0.pct : null });
+          if (r0) anyP = true;
+          if (pPy) { var r1 = pAt((parseInt(mk.slice(0, 4), 10) - 1) + mk.slice(4)); pPy.push(r1 ? r1.pct : null); }
+        });
+        if (anyP) chartModel.series.push({ id: 'punct', name: 'Menetrendszerűség' + (gran === 'day' ? ' (havi)' : ''), color: '#c026d3', unit: '%', values: pVals, meta: pMeta, pyValues: pPy });
+      }
 
       // Heti profil modell
       var weekday = null;
@@ -4123,6 +4143,7 @@
         return fmtAvg(v) + ' ' + ((s && s.unit) || 'fő') + perDayLbl;
       };
       var fmtSub = function (meta, s) {
+        if (meta && meta.punct) return meta.n ? 'Menetrendszerűség: ' + meta.n + ' vonat, utasszámmal súlyozva' + (isMonth ? '' : ' (havi érték)') : '';
         if (!meta || (meta.cap <= 0 && meta.booked <= 0)) return '';
         var u = (s && s.unit) || 'fő';
         var tot = (isMonth ? 'Havi össz.: ' : '') + fmtInt(meta.booked) + ' / ' + fmtInt(meta.cap) + ' ' + u;
