@@ -112,3 +112,13 @@ Napi kimutatás vonatszám szerint (`Datum`, `Vonatszám`, `Eltérés`, `Kód`, 
 - **Vonatnév-elemzés:** KPI-kártya, „Összeállítási eltérések” fejezet vonatszámonkénti grafikonnal, javaslatok (pl. ha a közlekedések ≥5%-ában kevesebb járművel ment, vagy telt vonat közlekedett kevesebb kocsival).
 - **1. fül táblázat:** „Össz. eltérés” oszlop a szűrt időszakra (zárójelben a kevesebb járműves).
 - A foglalási kapacitás a tervezett összeállítást tükrözi, ezért kevesebb kocsival a valós zsúfoltság nagyobb lehet, mint amit a kihasználtság mutat. A kimutatás sorainak kb. harmada köthető helyjegyes vonatszámhoz.
+
+## Kerékpáros viszonylatok a vasúthálózaton (4. fül)
+
+A viszonylat-térkép minden kerékpáros viszonylatot a vasúthálózatra terhel: az indulási és a célállomás közötti legrövidebb úton, a fővonalakat előnyben részesítve (mellékvonal 1,2×, csak teherforgalmú vagy megszűnt vonal 3× súllyal), így pl. Budapest–Szeged Cegléden át megy. A közös szakaszokon a jegyek összeadódnak; vonalvastagság és árnyalat: a szakaszon áthaladó jegyek (mindkét irány). A szakaszra mutatva látszik a vonal (és a közös szakaszon haladó további vonalak), valamint a legnagyobb áthaladó viszonylatok. A település kiválasztásakor ugyanígy, csak annak kapcsolataival. Alatta „Vonalak kerékpáros terhelése” táblázat (Ø terhelés, legnagyobb terhelés a saját szakaszon, jegy-km); Excel-exportban teljes terjedelemben.
+
+A hálózat az OSM vonalrelációiból (`vasut-vonalak.geojson`) készül: a párhuzamos vágányok ~60 m-en belül összevonva, az állomások a legközelebbi vonalponthoz kötve. A legrövidebb út nem mindig egyezik a jegy tényleges útvonalával.
+
+## Havi riport (8. fül)
+
+Választható járatok (vonatnév vagy vonatszám, több is; alapból minden helyjegyes vonat) és hónapok (egy vagy több; gyorsgombok: utolsó teljes hónap, utolsó 3 hónap, az év eddig, előző év). KPI-kártyák: foglaltság és változása, kapacitás és változása, kihasználtság és változása (előző év azonos hónapjai), menetrendszerűség (utasszámmal súlyozva), 1. osztály, 2. osztály, prémium és kerékpárhely kihasználtsága, bisztró bevétel és változása az előző hónaphoz (több hónapnál az egy hónappal korábbi időszakhoz). A foglaltság és a kapacitás a fejléc kapacitás-kapcsolóját követi. Exportálható (PowerPoint, PNG, Excel).
