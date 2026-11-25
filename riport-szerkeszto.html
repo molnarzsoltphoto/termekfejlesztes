@@ -1570,6 +1570,8 @@
     @media (max-width: 1180px) { .kpi-grid.hr-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
     @media (max-width: 860px) { .kpi-grid.hr-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .hr-row { grid-template-columns: 1fr; } }
     .kpi-grid.hr-kpis .hr-w2 { grid-column: span 2; }
+    .hr-kpis .kpi-subs strong.neg { color: #e11d48; }
+    .hr-kpis .kpi-subs strong.pos { color: #059669; }
     @media (max-width: 1180px) { .kpi-grid.hr-kpis .hr-w2 { grid-column: span 1; } }
     @media (max-width: 520px) { .kpi-grid.hr-kpis { grid-template-columns: 1fr; } }
 
@@ -12033,7 +12035,7 @@
       months.forEach(function (m) { mSet[m] = 1; pySet[moPrev(m)] = 1; });
       var dm = occ.dates.map(function (d) { var k = d.slice(0, 7); return mSet[k] ? 1 : (pySet[k] ? 2 : 0); });
       var Z = function () { return { bk: 0, cap: 0, runs: 0, b1: 0, c1: 0, b2: 0, c2: 0, bp: 0, cp: 0, bb: 0, cb: 0, bf: 0, cf: 0, bh: 0, ch: 0, days: new Set() }; };
-      var cur = Z(), py = Z(), nums = new Set(), names = new Set();
+      var cur = Z(), py = Z(), nums = new Set(), names = new Set(), runDays = new Map();
       for (var i = 0; i < occ.rowCount; i++) {
         var off = i * STRIDE, r = R[off + 1];
         if (!mask[r]) continue;
@@ -12043,7 +12045,11 @@
         T.b1 += R[off + 3]; T.c1 += R[off + 2]; T.b2 += R[off + 5]; T.c2 += R[off + 4]; T.bp += R[off + 13]; T.cp += R[off + 12];
         T.bb += R[off + 7]; T.cb += R[off + 6]; T.bf += R[off + 9]; T.cf += R[off + 8]; T.bh += R[off + 11]; T.ch += R[off + 10];
         T.runs++; T.days.add(R[off]);
-        if (w === 1) { nums.add(occ.routes[r][0]); if (occ.routes[r][1]) names.add(occ.routes[r][1]); }
+        if (w === 1) {
+          var nu = occ.routes[r][0], rs = runDays.get(nu);
+          nums.add(nu); if (occ.routes[r][1]) names.add(occ.routes[r][1]);
+          if (!rs) { rs = new Set(); runDays.set(nu, rs); } rs.add(R[off]);
+        }
       }
       [cur, py].forEach(function (T) {
         T.bk = T.b1 + T.b2 + T.bp + (CAP_ALL ? T.bf + T.bh : 0);
@@ -12053,31 +12059,48 @@
       // menetrendszerűség: utasszámmal súlyozva a választott vonatszámokra
       var pun = null;
       if (state.punct && state.punct.months) {
-        var pm = months.filter(function (m) { return state.punct.months[m]; }), sw = 0, sv = 0;
-        pm.forEach(function (m) {
-          var by = state.punct.months[m].byNum;
-          nums.forEach(function (n) { var e = by[n]; if (e && e[1] !== null && e[2] > 0) { sw += e[1] * e[2]; sv += e[2]; } });
-        });
-        pun = { months: pm, p: sv ? 100 * sw / sv : null, missing: months.filter(function (m) { return !state.punct.months[m]; }) };
+        var punOf = function (ms) {
+          var sw = 0, sv = 0;
+          ms.forEach(function (m) {
+            var by = state.punct.months[m].byNum;
+            nums.forEach(function (n) { var e = by[n]; if (e && e[1] !== null && e[2] > 0) { sw += e[1] * e[2]; sv += e[2]; } });
+          });
+          return sv ? 100 * sw / sv : null;
+        };
+        var pm = months.filter(function (m) { return state.punct.months[m]; });
+        // előző havi összevetés: minden választott hónap az előtte lévő hónappal (ugyanazokra a vonatszámokra)
+        var pmPrev = months.map(hrMonthBack), prevOk = pm.length && pmPrev.every(function (m) { return state.punct.months[m]; });
+        pun = { months: pm, p: punOf(pm), pPrev: prevOk ? punOf(pmPrev) : null, prevMonths: pmPrev, missing: months.filter(function (m) { return !state.punct.months[m]; }) };
       }
       // bisztró: a bisztró-munkafüzet napi bevétele vonatszámonként (a foglalási adattól függetlenül)
       var bis = null, bz = state.bisz;
       if (bz && bz.byNum) {
         var base = Date.parse(bz.d0 + 'T00:00:00Z'), prev = {}, cov = function (m) { return m >= bz.d0.slice(0, 7) && m <= (bz.last || '9999').slice(0, 7); };
         months.forEach(function (m) { prev[hrMonthBack(m)] = 1; });
-        var bm = {}, rc = 0, tc = 0, rp = 0, tp = 0;
+        var rc = 0, tc = 0, rp = 0, tp = 0, revDay = new Map(), lastStr = bz.last || '9999-12-31';
+        // bevétel nélküli napok: a bisztrós vonatszámok (amelyeknek van bisztró-adata) közlekedési napjai, amikor nem volt bevétel
+        var bzRunDays = new Map(), bzTrainDays = 0, bzZeroTrainDays = 0;
         nums.forEach(function (n) {
           var f = bz.byNum[n];
           if (!f) return;
+          var has = new Set();
           for (var k = 0; k < f.length; k += 3) {
             var mk = new Date(base + f[k] * 86400000).toISOString().slice(0, 7);
-            if (mSet[mk]) { rc += f[k + 1]; tc += f[k + 2]; }
+            if (mSet[mk]) { rc += f[k + 1]; tc += f[k + 2]; if (f[k + 1] > 0) { has.add(f[k]); revDay.set(f[k], (revDay.get(f[k]) || 0) + f[k + 1]); } }
             if (prev[mk]) { rp += f[k + 1]; tp += f[k + 2]; }
           }
+          (runDays.get(n) || new Set()).forEach(function (di) {
+            var ds = occ.dates[di];
+            if (ds < bz.d0 || ds > lastStr) return;
+            var off2 = Math.round((Date.parse(ds + 'T00:00:00Z') - base) / 86400000);
+            bzTrainDays++; if (!has.has(off2)) bzZeroTrainDays++;
+            bzRunDays.set(off2, true);
+          });
         });
+        var zeroDays = 0; bzRunDays.forEach(function (v, d) { if (!(revDay.get(d) > 0)) zeroDays++; });
         // előző időszak a „nem szereplő” vonatszámokra is: a választott vonatszámok egy hónappal korábban
         var curOk = months.every(cov), prevOk = Object.keys(prev).every(cov);
-        bis = { rev: rc, tr: tc, revP: rp, trP: tp, curOk: curOk, prevOk: prevOk, partial: months.some(function (m) { return bz.last && m === bz.last.slice(0, 7) && bz.last.slice(8) < '28'; }) };
+        bis = { rev: rc, tr: tc, revP: rp, trP: tp, curOk: curOk, prevOk: prevOk, runDays: bzRunDays.size, zeroDays: zeroDays, trainDays: bzTrainDays, zeroTrainDays: bzZeroTrainDays, partial: months.some(function (m) { return bz.last && m === bz.last.slice(0, 7) && bz.last.slice(8) < '28'; }) };
       }
       return { cur: cur, py: py, pun: pun, bis: bis, nums: nums, names: names, whole: !items.length };
     }
@@ -12138,7 +12161,10 @@
       k += hrKpi('#1d4ed8', 'Kihasználtság' + capLab, fmtPct(C.occ === null ? null : 100 * C.occ), ['Előző év: <strong>' + fmtPct(P.occ === null ? null : 100 * P.occ) + '</strong>']);
       k += hrKpi(dOcc !== null && dOcc < 0 ? '#e11d48' : '#059669', 'Kihasználtság változása (előző év)', fmtPctPoint(dOcc), ['Bázis: <strong>' + fmtPct(P.occ === null ? null : 100 * P.occ) + '</strong>'], hrCls(dOcc));
       var pu = X.pun;
-      k += hrKpi('#c026d3', 'Menetrendszerűség', pu && pu.p !== null ? fmtPct(pu.p, 1) : '—', pu ? (pu.p !== null ? ['Utasszámmal súlyozva', pu.missing.length ? 'Nincs adat: <strong>' + pu.missing.map(moLabel).join(', ') + '</strong>' : (pu.months.length + ' hónap')] : ['Nincs menetrendszerűségi adat a választott hónapokra']) : ['Nincs betöltött menetrendszerűségi adat'], '', true);
+      var puD = pu && pu.p !== null && pu.pPrev !== null ? pu.p - pu.pPrev : null, one1 = H.months.length === 1;
+      k += hrKpi('#c026d3', 'Menetrendszerűség', pu && pu.p !== null ? fmtPct(pu.p, 1) : '—', pu ? (pu.p !== null ? [
+          (one1 ? 'Előző hónaphoz' : 'Egy hónappal korábbihoz') + ': <strong class="' + hrCls(puD) + '">' + (puD !== null ? fmtPctPoint(puD) : '—') + '</strong>' + (pu.pPrev !== null ? ' (' + (one1 ? moLabel(pu.prevMonths[0]) : 'korábban') + ': ' + fmtPct(pu.pPrev, 1) + ')' : ' (nincs adat: ' + pu.prevMonths.filter(function (m) { return !state.punct.months[m]; }).map(moLabel).join(', ') + ')'),
+          'Utasszámmal súlyozva', pu.missing.length ? 'Nincs adat: <strong>' + pu.missing.map(moLabel).join(', ') + '</strong>' : (pu.months.length + ' hónap')] : ['Nincs menetrendszerűségi adat a választott hónapokra']) : ['Nincs betöltött menetrendszerűségi adat'], '', true);
       var clsK = function (accent, lab, b, cc, bpy, cpy) {
         var v = pc(b, cc), vp = pc(bpy, cpy);
         return hrKpi(accent, lab, cc ? fmtPct(v) : '—', cc ? ['Foglalás: <strong>' + fmtInt(b) + ' / ' + fmtInt(cc) + '</strong>', 'Előző évhez: <strong>' + (vp !== null ? fmtPctPoint(v - vp) : '—') + '</strong>'] : ['Nincs ilyen kapacitás']);
@@ -12150,7 +12176,9 @@
       var B = X.bis;
       if (B) {
         var dB = B.prevOk && B.revP ? hrChgPct(B.rev, B.revP) : null, one = H.months.length === 1;
-        k += hrKpi('#7c3aed', 'Bisztró bevétel', B.curOk ? fmtInt(B.rev / 1e6 >= 10 ? B.rev / 1e6 : B.rev / 1e3) + hrUnit(B.rev / 1e6 >= 10 ? 'M Ft' : 'ezer Ft') : '—', B.curOk ? ['Tranzakció: <strong>' + fmtInt(B.tr) + '</strong>', 'Ø kosár: <strong>' + (B.tr ? fmtInt(B.rev / B.tr) + ' Ft' : '—') + '</strong>'].concat(B.partial ? ['A hónap adata még nem teljes'] : []) : ['A bisztró-adat ' + state.bisz.d0.slice(0, 7).replace('-', '.') + '-tól van'], '', true);
+        k += hrKpi('#7c3aed', 'Bisztró bevétel', B.curOk ? fmtInt(B.rev / 1e6 >= 10 ? B.rev / 1e6 : B.rev / 1e3) + hrUnit(B.rev / 1e6 >= 10 ? 'M Ft' : 'ezer Ft') : '—', B.curOk ? ['Tranzakció: <strong>' + fmtInt(B.tr) + '</strong>', 'Ø kosár: <strong>' + (B.tr ? fmtInt(B.rev / B.tr) + ' Ft' : '—') + '</strong>',
+          'Bevétel nélküli nap: <strong class="' + (B.zeroDays ? 'neg' : '') + '">' + fmtInt(B.zeroDays) + '</strong> / ' + fmtInt(B.runDays) + ' közlekedési nap',
+          'Bevétel nélküli vonatnap: <strong>' + fmtInt(B.zeroTrainDays) + '</strong> / ' + fmtInt(B.trainDays) + (B.trainDays ? ' (' + fmtPct(100 * B.zeroTrainDays / B.trainDays, 1) + ')' : '')].concat(B.partial ? ['A hónap adata még nem teljes'] : []) : ['A bisztró-adat ' + state.bisz.d0.slice(0, 7).replace('-', '.') + '-tól van'], '', true);
         k += hrKpi(dB !== null && dB < 0 ? '#e11d48' : '#059669', 'Bisztró bevétel változása (' + (one ? 'előző hónap' : 'egy hónappal korábbi időszak') + ')', fmtSigned(dB, 1, '%'),
           [(one ? moLabel(hrMonthBack(H.months[0])) : 'Egy hónappal korábban') + ': <strong>' + (B.prevOk ? fmtInt(B.revP / 1e6 >= 10 ? B.revP / 1e6 : B.revP / 1e3) + (B.revP / 1e6 >= 10 ? ' M Ft' : ' ezer Ft') : 'nincs adat') + '</strong>', 'Tranzakció: <strong>' + (B.prevOk ? fmtSigned(hrChgPct(B.tr, B.trP), 1, '%') : '—') + '</strong>'], hrCls(dB), true);
       } else {
@@ -12159,7 +12187,7 @@
       var hybNames = H.items.length ? Array.from(X.names) : HYB_ALWAYS.concat(HYB_OFFSEASON);
       host.innerHTML = '<div class="card"><div class="card-header"><div><h2 class="card-title" id="hr-title">Havi riport – ' + escHtml(title) + '</h2><div class="card-subtitle" id="hr-sub">' + escHtml(scope) + ' • ' + fmtInt(X.nums.size) + ' vonatszám • ' + C.days.size + ' nap • összevetés: előző év azonos hónapjai</div></div></div>' +
         '<div id="hr-kpis" class="kpi-grid hr-kpis">' + k + '</div>' + hybNote(hybNames, X.whole) +
-        '<div class="fc-small" style="margin-top:8px;">Foglaltság és kapacitás: helyjegyes foglalási adat (' + capLbl('lbl') + '; a fejléc kapcsolójával állítható). Az osztályonkénti és a kerékpárhely-kihasználtság a foglalás és a kapacitás hányadosa. Menetrendszerűség: a menetrendszerűségi kimutatás vonatszámonkénti értéke, utasszámmal súlyozva. Bisztró: a bisztró-munkafüzet napi bevétele a választott vonatszámokra.</div></div>';
+        '<div class="fc-small" style="margin-top:8px;">Foglaltság és kapacitás: helyjegyes foglalási adat (' + capLbl('lbl') + '; a fejléc kapcsolójával állítható). Az osztályonkénti és a kerékpárhely-kihasználtság a foglalás és a kapacitás hányadosa. Menetrendszerűség: a menetrendszerűségi kimutatás vonatszámonkénti értéke, utasszámmal súlyozva. Bisztró: a bisztró-munkafüzet napi bevétele a választott vonatszámokra. Bevétel nélküli nap: olyan nap, amikor a választott, bisztró-adattal rendelkező vonatszámok közül legalább egy közlekedett (a foglalási adat szerint), de egyiknek sem volt bevétele; bevétel nélküli vonatnap: ugyanez vonatszámonként (vonat × nap). A bisztró-adatban nem szereplő vonatszámok nem számítanak.</div></div>';
     }
     function bindHrCtl() {
       var H = state.hr, inp = document.getElementById('hr-add');
