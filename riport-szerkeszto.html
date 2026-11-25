@@ -9756,7 +9756,7 @@
       ['km', 'bisz', 'dep'].forEach(function (k) { if (payload[k] && payload[k].byNum) state[k] = payload[k]; });
       ['bikeSales', 'bikeOD', 'punct'].forEach(function (k) { if (payload[k] && payload[k].months) state[k] = payload[k]; });
       if (Array.isArray(payload.watch)) state.watch = payload.watch;
-      state.dev = payload.dev && payload.dev.r ? payload.dev : null;
+      state.dev = devClean(payload.dev);
       if (payload.settings && payload.settings.fc) Object.assign(state.fc, payload.settings.fc);
       state.readonly = !!parsed.readonly || state.readonly;
       if (state.readonly) document.body.setAttribute('data-readonly', 'true');
@@ -9879,7 +9879,7 @@
       return {
         occ: { dates: state.occ.dates, routes: state.occ.routes, rowsFlat: Array.from(state.occ.rowsFlat) },
         pass: state.pass.map(function (r) { return [r.date, r.balSzem, r.bakSzem, r.mecSzem, r.balEt, r.bakEt, r.mecEt, r.balOssz, r.bakOssz, r.mecOssz]; }),
-        km: state.km, bisz: state.bisz, dep: state.dep, bikeSales: state.bikeSales, bikeOD: state.bikeOD, punct: state.punct, dev: state.dev || null, watch: state.watch || null,
+        km: state.km, bisz: state.bisz, dep: state.dep, bikeSales: state.bikeSales, bikeOD: state.bikeOD, punct: state.punct, dev: devClean(state.dev), watch: state.watch || null,
         settings: { fc: { target: state.fc.target, unitC1: state.fc.unitC1, unitC2: state.fc.unitC2, useTrend: state.fc.useTrend, priceC1: state.fc.priceC1, priceC2: state.fc.priceC2 } }
       };
     }
@@ -11479,10 +11479,15 @@
     var DEV_CAT = ['kevesebb jármű', 'több jármű', 'egyéb'];
     var DEV_COL = { 'kevesebb jármű': '#0b2e59', 'több jármű': '#0284c7', 'egyéb': '#94a3b8' };
     var DEV_LBL = { 'kevesebb jármű': 'Kevesebb jármű', 'több jármű': 'Több jármű', 'egyéb': 'Egyéb' };
+    // gyorsítótárak az adat mellett, de nem rajta: így nem kerülnek be a mentett / feltöltött adatba
+    var DEV_CACHE = new WeakMap();
+    function devCache(D) { var c = DEV_CACHE.get(D); if (!c) { c = { ds: [], t1: null }; DEV_CACHE.set(D, c); } return c; }
+    // tiszta másolat mentéshez (a régebben feltöltött adatból a gyorsítótár-mezőket is elhagyja)
+    function devClean(D) { return D && D.r ? { base: D.base, nums: D.nums, elts: D.elts, codes: D.codes, r: D.r } : null; }
     function devDayStr(D, d) {
-      if (!D._ds) D._ds = [];
-      if (D._ds[d] === undefined) { var t = Date.parse(D.base + 'T00:00:00Z') + d * 86400000; D._ds[d] = new Date(t).toISOString().slice(0, 10); }
-      return D._ds[d];
+      var ds = devCache(D).ds;
+      if (ds[d] === undefined) { var t = Date.parse(D.base + 'T00:00:00Z') + d * 86400000; ds[d] = new Date(t).toISOString().slice(0, 10); }
+      return ds[d];
     }
     function devCatOf(D, code) { var c = D.codes[String(code)]; var k = c ? c[0] : 'egyéb'; return DEV_CAT.indexOf(k) >= 0 ? k : 'egyéb'; }
     function devEvtOf(D, code) { var c = D.codes[String(code)]; return c ? c[1] : 'ismeretlen (' + code + ')'; }
@@ -11775,8 +11780,8 @@
     }
     // 1. fül, járatonkénti táblázat: eltérések száma vonatszámonként a szűrt időszakban
     function devT1Col(rows) {
-      var t1 = state.t1, D = state.dev, sig = [t1.dateFrom, t1.dateTo, Array.from(t1.selectedYears).join(','), Array.from(t1.selectedMonths).join(','), D.r.length].join('#');
-      if (!D._t1 || D._t1.sig !== sig) {
+      var t1 = state.t1, D = state.dev, DC = devCache(D), sig = [t1.dateFrom, t1.dateTo, Array.from(t1.selectedYears).join(','), Array.from(t1.selectedMonths).join(','), D.r.length].join('#');
+      if (!DC.t1 || DC.t1.sig !== sig) {
         var from = t1.dateFrom, to = t1.dateTo || t1.dateFrom, hasY = t1.selectedYears.size > 0, hasM = t1.selectedMonths.size > 0, M = new Map();
         for (var i = 0; i < D.r.length; i += 4) {
           var ds = devDayStr(D, D.r[i]);
@@ -11786,9 +11791,9 @@
           if (!e) { e = [0, 0]; M.set(num, e); }
           e[0]++; if (devCatOf(D, D.r[i + 2]) === 'kevesebb jármű') e[1]++;
         }
-        D._t1 = { sig: sig, M: M };
+        DC.t1 = { sig: sig, M: M };
       }
-      var M2 = D._t1.M;
+      var M2 = DC.t1.M;
       rows.forEach(function (r) { var e = M2.get(r.num); r.devN = e ? e[0] : 0; r.devLess = e ? e[1] : 0; });
       return { key: 'devN', label: 'Össz. eltérés', num: true, render: function (r) { return r.devN ? '<span title="ebből kevesebb járművel: ' + r.devLess + '"><strong>' + fmtInt(r.devN) + '</strong>' + (r.devLess ? ' <span class="fc-small">(' + r.devLess + ' kev.)</span>' : '') + '</span>' : '<span class="occ-none">0</span>'; } };
     }
